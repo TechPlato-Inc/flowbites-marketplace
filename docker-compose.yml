@@ -1,0 +1,143 @@
+# =============================================================================
+# Flowbites Marketplace - Production Docker Compose
+# =============================================================================
+# Architecture: Express API + Next.js SSR + Nginx reverse proxy
+# First run:  ./deploy.sh
+# Manual:     docker compose --env-file .env.production up -d --build
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # MongoDB Database
+  # ---------------------------------------------------------------------------
+  mongodb:
+    image: mongo:7
+    container_name: flowbites-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-flowbites_admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-changeme_in_production}
+      MONGO_INITDB_DATABASE: flowbites-marketplace
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - flowbites-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # Express API Server (port 5000)
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: flowbites-api
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME:-flowbites_admin}:${MONGO_ROOT_PASSWORD:-changeme_in_production}@mongodb:27017/flowbites-marketplace?authSource=admin
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-this-access-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-refresh-secret}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PLATFORM_FEE_PERCENT: ${STRIPE_PLATFORM_FEE_PERCENT:-30}
+      CLIENT_URL: ${CLIENT_URL:-https://localhost}
+      UPLOAD_DIR: ./uploads
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-104857600}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - flowbites-network
+
+  # ---------------------------------------------------------------------------
+  # Next.js SSR Client (port 3000)
+  # ---------------------------------------------------------------------------
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: client
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+        NEXT_PUBLIC_UPLOADS_URL: ${NEXT_PUBLIC_UPLOADS_URL:-/uploads}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://flowbites.com}
+    container_name: flowbites-client
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      API_INTERNAL_URL: http://api:5000/api
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+      NEXT_PUBLIC_UPLOADS_URL: ${NEXT_PUBLIC_UPLOADS_URL:-/uploads}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://flowbites.com}
+    networks:
+      - flowbites-network
+
+  # ---------------------------------------------------------------------------
+  # Nginx Reverse Proxy + SSL Termination
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: flowbites-nginx
+    restart: unless-stopped
+    depends_on:
+      - api
+      - client
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot_webroot:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro
+    networks:
+      - flowbites-network
+
+  # ---------------------------------------------------------------------------
+  # Certbot - Automatic Let's Encrypt SSL
+  # ---------------------------------------------------------------------------
+  certbot:
+    image: certbot/certbot
+    container_name: flowbites-certbot
+    volumes:
+      - certbot_webroot:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+# ---------------------------------------------------------------------------
+# Volumes
+# ---------------------------------------------------------------------------
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  uploads_data:
+    driver: local
+  certbot_webroot:
+    driver: local
+  certbot_certs:
+    driver: local
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
+networks:
+  flowbites-network:
+    driver: bridge

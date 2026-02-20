@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /settings
+Disallow: /service-orders/
+Disallow: /checkout/
+Disallow: /api/
+
+Sitemap: https://flowbites.com/sitemap.xml

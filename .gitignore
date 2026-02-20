@@ -1,0 +1,120 @@
+# =============================================================================
+# Flowbites Marketplace - Git Ignore
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
+node_modules/
+**/node_modules/
+
+# ---------------------------------------------------------------------------
+# Build Output
+# ---------------------------------------------------------------------------
+client/dist/
+client/build/
+server/dist/
+
+# ---------------------------------------------------------------------------
+# Environment Variables (secrets)
+# ---------------------------------------------------------------------------
+.env
+.env.local
+.env.production
+.env.development.local
+.env.test.local
+.env.production.local
+client/.env
+server/.env
+
+# Keep example env files
+!.env.example
+!.env.production.example
+!client/.env.example
+!server/.env.example
+
+# ---------------------------------------------------------------------------
+# Uploaded User Content
+# ---------------------------------------------------------------------------
+uploads/images/*
+uploads/templates/*
+uploads/shots/*
+server/uploads/images/*
+server/uploads/templates/*
+server/uploads/shots/*
+
+# Keep directory structure with .gitkeep
+!uploads/images/.gitkeep
+!uploads/templates/.gitkeep
+!uploads/shots/.gitkeep
+!server/uploads/images/.gitkeep
+!server/uploads/templates/.gitkeep
+!server/uploads/shots/.gitkeep
+
+# ---------------------------------------------------------------------------
+# Logs
+# ---------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------------------------------------------------------------------------
+# OS Files
+# ---------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ---------------------------------------------------------------------------
+# IDE / Editor
+# ---------------------------------------------------------------------------
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+*.sublime-project
+*.sublime-workspace
+
+# ---------------------------------------------------------------------------
+# Testing / Coverage
+# ---------------------------------------------------------------------------
+coverage/
+*.lcov
+.nyc_output/
+
+# ---------------------------------------------------------------------------
+# TypeScript
+# ---------------------------------------------------------------------------
+*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Misc
+# ---------------------------------------------------------------------------
+*.pem
+*.key
+*.cert
+*.crt
+
+# Docker volumes (if stored locally)
+docker-data/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# SSL certificates (for local nginx)
+certs/

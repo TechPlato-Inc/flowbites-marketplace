@@ -1,0 +1,132 @@
+# =============================================================================
+# Flowbites Marketplace - Development Docker Compose
+# =============================================================================
+# Architecture: Express API (5000) + Next.js dev (3000) + MongoDB
+# Usage: docker compose -f docker-compose.dev.yml up
+# Rebuild: docker compose -f docker-compose.dev.yml up --build
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # MongoDB Database (Development)
+  # ---------------------------------------------------------------------------
+  mongodb:
+    image: mongo:7
+    container_name: flowbites-dev-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: flowbites-marketplace
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_dev_data:/data/db
+    networks:
+      - flowbites-dev-network
+
+  # ---------------------------------------------------------------------------
+  # Express.js API Server (Development with Nodemon hot-reload)
+  # ---------------------------------------------------------------------------
+  server:
+    image: node:20-alpine
+    container_name: flowbites-dev-server
+    working_dir: /app/server
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      MONGODB_URI: mongodb://mongodb:27017/flowbites-marketplace
+      JWT_ACCESS_SECRET: dev-access-secret-not-for-production
+      JWT_REFRESH_SECRET: dev-refresh-secret-not-for-production
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
+      STRIPE_PLATFORM_FEE_PERCENT: 30
+      CLIENT_URL: http://localhost:3000
+      UPLOAD_DIR: ./uploads
+      MAX_FILE_SIZE: 104857600
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 1000
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server/src:/app/server/src
+      - ./server/package.json:/app/server/package.json
+      - ./server/package-lock.json:/app/server/package-lock.json
+      - ./server/uploads:/app/server/uploads
+      - server_node_modules:/app/server/node_modules
+    command: sh -c "npm install && npm run dev"
+    networks:
+      - flowbites-dev-network
+
+  # ---------------------------------------------------------------------------
+  # Next.js Client (Development with Fast Refresh)
+  # ---------------------------------------------------------------------------
+  client:
+    image: node:20-alpine
+    container_name: flowbites-dev-client
+    working_dir: /app/client
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5000/api
+      NEXT_PUBLIC_UPLOADS_URL: http://localhost:5000/uploads
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      API_INTERNAL_URL: http://server:5000/api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./next-client/app:/app/client/app
+      - ./next-client/src:/app/client/src
+      - ./next-client/public:/app/client/public
+      - ./next-client/package.json:/app/client/package.json
+      - ./next-client/package-lock.json:/app/client/package-lock.json
+      - ./next-client/next.config.js:/app/client/next.config.js
+      - ./next-client/tsconfig.json:/app/client/tsconfig.json
+      - ./next-client/tailwind.config.ts:/app/client/tailwind.config.ts
+      - ./next-client/postcss.config.js:/app/client/postcss.config.js
+      - ./next-client/middleware.ts:/app/client/middleware.ts
+      - client_node_modules:/app/client/node_modules
+    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
+    networks:
+      - flowbites-dev-network
+
+  # ---------------------------------------------------------------------------
+  # Mongo Express (Database Admin UI - Development Only)
+  # ---------------------------------------------------------------------------
+  mongo-express:
+    image: mongo-express:latest
+    container_name: flowbites-dev-mongo-express
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin123
+    ports:
+      - "8081:8081"
+    networks:
+      - flowbites-dev-network
+
+# ---------------------------------------------------------------------------
+# Volumes
+# ---------------------------------------------------------------------------
+volumes:
+  mongodb_dev_data:
+    driver: local
+  server_node_modules:
+    driver: local
+  client_node_modules:
+    driver: local
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
+networks:
+  flowbites-dev-network:
+    driver: bridge
