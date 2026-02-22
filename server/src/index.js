@@ -50,8 +50,10 @@ import withdrawalRoutes from './modules/withdrawals/withdrawal.routes.js';
 import ticketRoutes from './modules/tickets/ticket.routes.js';
 import conversationRoutes from './modules/messaging/messaging.routes.js';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables (skip .env in production — use platform env vars)
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 // Validate required env vars before anything else
 validateEnv();
