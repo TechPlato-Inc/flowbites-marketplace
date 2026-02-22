@@ -26,7 +26,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   login: async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
-    // Server sets httpOnly cookies (accessToken + refreshToken) automatically
+    // Server sets httpOnly cookies cross-origin; set marker cookies on this domain for middleware
+    document.cookie = `accessToken=1; path=/; max-age=900; secure; samesite=lax`;
+    document.cookie = `userRole=${data.data.user.role}; path=/; max-age=900; secure; samesite=lax`;
     set({ user: data.data.user, isAuthenticated: true });
   },
 
@@ -37,7 +39,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       name,
       role,
     });
-    // Server sets httpOnly cookies automatically
+    // Server sets httpOnly cookies cross-origin; set marker cookies on this domain for middleware
+    document.cookie = `accessToken=1; path=/; max-age=900; secure; samesite=lax`;
+    document.cookie = `userRole=${data.data.user.role}; path=/; max-age=900; secure; samesite=lax`;
     set({ user: data.data.user, isAuthenticated: true });
   },
 
@@ -52,7 +56,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (e) {
       // ignore
     }
-    // Clear the non-httpOnly userRole cookie (JS can clear this one)
+    // Clear marker cookies on this domain
+    document.cookie =
+      "accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;";
     document.cookie =
       "userRole=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;";
     set({ user: null, isAuthenticated: false });
@@ -62,9 +68,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       // httpOnly accessToken cookie is sent automatically via withCredentials
       const { data } = await api.get("/auth/me");
+      // Refresh marker cookies on this domain
+      document.cookie = `accessToken=1; path=/; max-age=900; secure; samesite=lax`;
+      document.cookie = `userRole=${data.data.user.role}; path=/; max-age=900; secure; samesite=lax`;
       set({ user: data.data.user, isAuthenticated: true, isLoading: false });
     } catch (error) {
-      // No valid session — clear stale non-httpOnly cookies
+      // No valid session — clear stale marker cookies
+      document.cookie =
+        "accessToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;";
       document.cookie =
         "userRole=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT;";
       set({ user: null, isAuthenticated: false, isLoading: false });
