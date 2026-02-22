@@ -50,8 +50,8 @@ import withdrawalRoutes from './modules/withdrawals/withdrawal.routes.js';
 import ticketRoutes from './modules/tickets/ticket.routes.js';
 import conversationRoutes from './modules/messaging/messaging.routes.js';
 
-// Load environment variables (skip .env in production — use platform env vars)
-if (process.env.NODE_ENV !== 'production') {
+// Load .env only for local development — on Railway/production, env vars are injected by the platform
+if (!process.env.MONGODB_URI) {
   dotenv.config();
 }
 
