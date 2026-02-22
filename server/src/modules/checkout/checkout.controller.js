@@ -5,11 +5,12 @@ const checkoutService = new CheckoutService();
 export class CheckoutController {
   async createTemplateCheckout(req, res, next) {
     try {
-      const { items } = req.body;
+      const { items, couponCode } = req.body;
       const result = await checkoutService.createTemplateCheckoutSession(
         req.user._id,
         req.user.email,
-        items
+        items,
+        couponCode
       );
       res.json({ success: true, data: result });
     } catch (error) {

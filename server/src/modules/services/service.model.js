@@ -225,12 +225,17 @@ const serviceOrderSchema = new mongoose.Schema({
 servicePackageSchema.index({ creatorId: 1, templateId: 1 });
 servicePackageSchema.index({ templateId: 1, isActive: 1 });
 servicePackageSchema.index({ isActive: 1, category: 1 });
+servicePackageSchema.index({ creatorId: 1, createdAt: -1 });
 
 serviceOrderSchema.index({ buyerId: 1, status: 1 });
 serviceOrderSchema.index({ creatorId: 1, status: 1 });
 serviceOrderSchema.index({ assignedCreatorId: 1, status: 1 });
 serviceOrderSchema.index({ isGenericRequest: 1, status: 1 });
 serviceOrderSchema.index({ status: 1, dueDate: 1 });
+serviceOrderSchema.index({ buyerId: 1, createdAt: -1 });
+serviceOrderSchema.index({ creatorId: 1, createdAt: -1 });
+serviceOrderSchema.index({ assignedCreatorId: 1, createdAt: -1 });
+serviceOrderSchema.index({ status: 1, createdAt: -1 });
 
 // Auto-generate order number
 serviceOrderSchema.pre('save', async function(next) {

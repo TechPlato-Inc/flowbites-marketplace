@@ -1,8 +1,25 @@
 import { Template } from '../templates/template.model.js';
 import { CreatorProfile } from '../creators/creator.model.js';
+import { User } from '../users/user.model.js';
 import { Category } from '../categories/category.model.js';
+import { Refund } from '../refunds/refund.model.js';
+import { Review } from '../reviews/review.model.js';
+import { Order } from '../orders/order.model.js';
+import { Notification } from '../notifications/notification.model.js';
+import { Follower } from '../followers/follower.model.js';
+import { Coupon } from '../coupons/coupon.model.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { escapeRegex } from '../../lib/utils.js';
+import {
+  sendTemplateApproved,
+  sendTemplateRejected,
+  sendCreatorApproved,
+  sendCreatorRejected,
+} from '../../services/email.js';
+import { NotificationService } from '../notifications/notification.service.js';
+import { AuditLog } from '../audit/auditLog.model.js';
+
+const notificationService = new NotificationService();
 
 export class AdminService {
   async getPendingTemplates() {
@@ -34,6 +51,22 @@ export class AdminService {
       $inc: { 'stats.templateCount': 1 }
     });
 
+    // Notify creator via email (non-blocking)
+    this._notifyCreatorAboutTemplate(template, 'approved').catch(err =>
+      console.error('Failed to send template approved email:', err)
+    );
+
+    // In-app notification (non-blocking)
+    notificationService.notifyTemplateApproved(template.creatorId, template.title).catch(err =>
+      console.error('Failed to send template approved notification:', err)
+    );
+
+    // Audit log (non-blocking)
+    AuditLog.create({
+      adminId, action: 'template_approved', targetType: 'template', targetId: templateId,
+      details: { title: template.title },
+    }).catch(() => {});
+
     return template;
   }
 
@@ -52,6 +85,22 @@ export class AdminService {
     template.moderatedBy = adminId;
     template.moderatedAt = new Date();
     await template.save();
+
+    // Notify creator via email (non-blocking)
+    this._notifyCreatorAboutTemplate(template, 'rejected', reason).catch(err =>
+      console.error('Failed to send template rejected email:', err)
+    );
+
+    // In-app notification (non-blocking)
+    notificationService.notifyTemplateRejected(template.creatorId, template.title, reason).catch(err =>
+      console.error('Failed to send template rejected notification:', err)
+    );
+
+    // Audit log (non-blocking)
+    AuditLog.create({
+      adminId, action: 'template_rejected', targetType: 'template', targetId: templateId,
+      details: { title: template.title, reason },
+    }).catch(() => {});
 
     return template;
   }
@@ -177,7 +226,15 @@ export class AdminService {
       });
     }
 
+    const templateTitle = template.title;
     await template.deleteOne();
+
+    // Audit log (non-blocking)
+    AuditLog.create({
+      adminId: null, action: 'template_deleted', targetType: 'template', targetId: templateId,
+      details: { title: templateTitle },
+    }).catch(() => {});
+
     return { message: 'Template deleted' };
   }
 
@@ -378,6 +435,26 @@ export class AdminService {
     creator.isVerified = true;
     await creator.save();
 
+    // Notify creator via email (non-blocking)
+    User.findById(creator.userId).then(user => {
+      if (user) sendCreatorApproved(user.email, creator.displayName);
+    }).catch(err => console.error('Failed to send creator approved email:', err));
+
+    // In-app notification (non-blocking)
+    notificationService.create({
+      userId: creator.userId,
+      type: 'creator_approved',
+      title: 'Creator account approved!',
+      message: 'Congratulations! You can now upload templates and offer services.',
+      link: '/dashboard/creator',
+    }).catch(err => console.error('Failed to send creator approved notification:', err));
+
+    // Audit log (non-blocking)
+    AuditLog.create({
+      adminId, action: 'creator_approved', targetType: 'creator', targetId: creatorId,
+      details: { displayName: creator.displayName },
+    }).catch(() => {});
+
     return creator;
   }
 
@@ -394,6 +471,26 @@ export class AdminService {
     creator.onboarding.reviewedAt = new Date();
     creator.isVerified = false;
     await creator.save();
+
+    // Notify creator via email (non-blocking)
+    User.findById(creator.userId).then(user => {
+      if (user) sendCreatorRejected(user.email, creator.displayName, reason);
+    }).catch(err => console.error('Failed to send creator rejected email:', err));
+
+    // In-app notification (non-blocking)
+    notificationService.create({
+      userId: creator.userId,
+      type: 'creator_rejected',
+      title: 'Creator application update',
+      message: reason || 'Your creator application needs updates. Please review and re-apply.',
+      link: '/dashboard/creator/onboarding',
+    }).catch(err => console.error('Failed to send creator rejected notification:', err));
+
+    // Audit log (non-blocking)
+    AuditLog.create({
+      adminId, action: 'creator_rejected', targetType: 'creator', targetId: creatorId,
+      details: { displayName: creator.displayName, reason },
+    }).catch(() => {});
 
     return creator;
   }
@@ -441,5 +538,99 @@ export class AdminService {
     }));
     await Category.bulkWrite(ops);
     return { message: 'Categories reordered' };
+  }
+
+  async getDashboardStats() {
+    const [
+      userCount,
+      creatorCount,
+      pendingCreators,
+      templateStats,
+      orderCount,
+      orderRevenue,
+      refundStats,
+      reviewModQueue,
+      reviewTotal,
+      notificationCount,
+      followerCount,
+      activeCoupons,
+    ] = await Promise.all([
+      User.countDocuments(),
+      CreatorProfile.countDocuments({ 'onboarding.status': 'approved' }),
+      CreatorProfile.countDocuments({ 'onboarding.status': 'submitted' }),
+      Template.aggregate([
+        { $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+        }},
+      ]),
+      Order.countDocuments({ status: 'paid' }),
+      Order.aggregate([
+        { $match: { status: 'paid' } },
+        { $group: { _id: null, total: { $sum: '$total' } } },
+      ]),
+      Refund.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 }, total: { $sum: '$amount' } } },
+      ]),
+      Review.countDocuments({ status: 'pending' }),
+      Review.countDocuments(),
+      Notification.countDocuments(),
+      Follower.countDocuments(),
+      Coupon.countDocuments({ isActive: true }),
+    ]);
+
+    const templatesByStatus = {};
+    templateStats.forEach(s => { templatesByStatus[s._id] = s.count; });
+
+    const refundsByStatus = {};
+    refundStats.forEach(s => { refundsByStatus[s._id] = { count: s.count, total: s.total }; });
+
+    return {
+      users: {
+        total: userCount,
+        creators: creatorCount,
+        pendingCreatorApplications: pendingCreators,
+      },
+      templates: {
+        byStatus: templatesByStatus,
+        total: Object.values(templatesByStatus).reduce((a, b) => a + b, 0),
+      },
+      orders: {
+        total: orderCount,
+        revenue: orderRevenue[0]?.total || 0,
+      },
+      refunds: {
+        byStatus: refundsByStatus,
+        pendingCount: refundsByStatus.requested?.count || 0,
+        totalRefunded: refundsByStatus.processed?.total || 0,
+      },
+      reviews: {
+        total: reviewTotal,
+        pendingModeration: reviewModQueue,
+      },
+      notifications: {
+        totalSent: notificationCount,
+      },
+      followers: {
+        totalFollows: followerCount,
+      },
+      coupons: {
+        active: activeCoupons,
+      },
+    };
+  }
+
+  async _notifyCreatorAboutTemplate(template, status, reason) {
+    const creator = await CreatorProfile.findById(template.creatorProfileId);
+    if (!creator) return;
+
+    const user = await User.findById(creator.userId);
+    if (!user) return;
+
+    if (status === 'approved') {
+      await sendTemplateApproved(user.email, creator.displayName, template.title);
+    } else if (status === 'rejected') {
+      await sendTemplateRejected(user.email, creator.displayName, template.title, reason);
+    }
   }
 }

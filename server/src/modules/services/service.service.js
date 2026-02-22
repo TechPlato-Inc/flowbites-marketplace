@@ -3,6 +3,9 @@ import { Template } from '../templates/template.model.js';
 import { User } from '../users/user.model.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { escapeRegex } from '../../lib/utils.js';
+import { NotificationService } from '../notifications/notification.service.js';
+
+const notificationService = new NotificationService();
 
 // Helper: push an activity log entry onto an order
 function logActivity(order, action, performedBy, details = '') {
@@ -108,6 +111,12 @@ export class ServiceService {
       $inc: { 'stats.orders': 1 }
     });
 
+    // Notify creator of new order
+    const buyer = await User.findById(buyerId).select('name').lean();
+    notificationService.notifyServiceOrderCreated(
+      servicePackage.creatorId, order._id, servicePackage.name, buyer?.name || 'A buyer'
+    ).catch(err => console.error('Failed to send service order notification:', err));
+
     return order;
   }
 
@@ -155,13 +164,19 @@ export class ServiceService {
     if (status === 'accepted') {
       order.acceptedAt = new Date();
       logActivity(order, 'status_accepted', creatorId, 'Order accepted by creator');
+      notificationService.notifyServiceOrderAccepted(order.buyerId, order._id, order.packageName)
+        .catch(err => console.error('Notification error:', err));
     } else if (status === 'in_progress') {
       logActivity(order, 'status_in_progress', creatorId, 'Creator started working');
+      notificationService.notifyServiceOrderInProgress(order.buyerId, order._id, order.packageName)
+        .catch(err => console.error('Notification error:', err));
     } else if (status === 'delivered') {
       order.deliveredAt = new Date();
       order.deliveryFiles = data.deliveryFiles || [];
       order.deliveryNote = data.deliveryNote;
       logActivity(order, 'status_delivered', creatorId, 'Work delivered');
+      notificationService.notifyServiceOrderDelivered(order.buyerId, order._id, order.packageName)
+        .catch(err => console.error('Notification error:', err));
     } else if (status === 'completed') {
       order.completedAt = new Date();
       order.paymentReleased = true;
@@ -174,8 +189,12 @@ export class ServiceService {
           'stats.revenue': order.price
         }
       });
+      notificationService.notifyServiceOrderCompleted(order.buyerId, order._id, order.packageName)
+        .catch(err => console.error('Notification error:', err));
     } else if (status === 'rejected') {
       logActivity(order, 'status_rejected', creatorId, 'Order rejected by creator');
+      notificationService.notifyServiceOrderRejected(order.buyerId, order._id, order.packageName)
+        .catch(err => console.error('Notification error:', err));
     } else {
       logActivity(order, `status_${status}`, creatorId, `Status changed from ${prevStatus} to ${status}`);
     }
@@ -204,6 +223,8 @@ export class ServiceService {
     if (status === 'revision_requested') {
       order.revisionsUsed = (order.revisionsUsed || 0) + 1;
       logActivity(order, 'revision_requested', buyerId, `Revision ${order.revisionsUsed}${order.revisions > 0 ? `/${order.revisions}` : ''} requested`);
+      notificationService.notifyServiceOrderRevision(order.creatorId, order._id, order.packageName)
+        .catch(err => console.error('Notification error:', err));
     }
     if (status === 'completed') {
       order.completedAt = new Date();
@@ -216,6 +237,8 @@ export class ServiceService {
           'stats.revenue': order.price
         }
       });
+      notificationService.notifyServiceOrderCompleted(order.creatorId, order._id, order.packageName)
+        .catch(err => console.error('Notification error:', err));
     }
 
     await order.save();
@@ -243,6 +266,14 @@ export class ServiceService {
     order.status = 'cancelled';
     logActivity(order, 'order_cancelled', userId, reason || 'Order cancelled');
     await order.save();
+
+    // Notify the other party
+    const otherUserId = userId.toString() === order.buyerId.toString()
+      ? order.creatorId
+      : order.buyerId;
+    notificationService.notifyServiceOrderCancelled(otherUserId, order._id, order.packageName, reason)
+      .catch(err => console.error('Notification error:', err));
+
     return order;
   }
 
@@ -269,6 +300,11 @@ export class ServiceService {
     };
     logActivity(order, 'dispute_opened', buyerId, reason);
     await order.save();
+
+    // Notify creator about the dispute
+    notificationService.notifyServiceOrderDisputed(order.creatorId, order._id, order.packageName)
+      .catch(err => console.error('Notification error:', err));
+
     return order;
   }
 
@@ -312,6 +348,14 @@ export class ServiceService {
     }
 
     await order.save();
+
+    // Notify both parties about dispute resolution
+    const outcomeLabels = { refund: 'full refund', release_payment: 'payment released to creator', partial_refund: 'partial refund', redo: 'creator must redo the work' };
+    const outcomeLabel = outcomeLabels[outcome] || outcome;
+    notificationService.notifyServiceDisputeResolved(order.buyerId, order._id, order.packageName, outcomeLabel)
+      .catch(err => console.error('Notification error:', err));
+    notificationService.notifyServiceDisputeResolved(order.creatorId, order._id, order.packageName, outcomeLabel)
+      .catch(err => console.error('Notification error:', err));
 
     return ServiceOrder.findById(orderId)
       .populate('buyerId', 'name email avatar')

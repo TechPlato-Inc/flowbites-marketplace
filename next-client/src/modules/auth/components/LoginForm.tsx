@@ -1,35 +1,45 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
-import { Button, Input } from '@/design-system';
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuthStore } from "@/stores/authStore";
+import { Button, Input } from "@/design-system";
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuthStore();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       await login(email, password);
-      const redirect = searchParams.get('redirect') || '/';
-      router.push(redirect);
+      const redirect = searchParams.get("redirect");
+      // Only allow same-origin relative paths to prevent open redirect attacks
+      if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+        router.push(redirect);
+      } else {
+        // Role-based redirect to the correct dashboard
+        const { user } = useAuthStore.getState();
+        if (user?.role === "admin") router.push("/dashboard/admin");
+        else if (user?.role === "creator") router.push("/dashboard/creator");
+        else router.push("/dashboard/buyer");
+      }
     } catch (err: unknown) {
       const msg =
-        err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data
+              ?.error
           : undefined;
-      setError(msg || 'Login failed. Please check your credentials.');
+      setError(msg || "Login failed. Please check your credentials.");
     } finally {
       setLoading(false);
     }
@@ -38,7 +48,9 @@ export function LoginForm() {
   return (
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-display font-bold text-neutral-900 mb-2">Welcome Back</h1>
+        <h1 className="text-3xl font-display font-bold text-neutral-900 mb-2">
+          Welcome Back
+        </h1>
         <p className="text-neutral-600">Sign in to your Flowbites account</p>
       </div>
 
@@ -63,17 +75,36 @@ export function LoginForm() {
           />
 
           {error && (
-            <div className="text-sm text-error bg-error-light p-3 rounded-lg">{error}</div>
+            <div className="text-sm text-error bg-error-light p-3 rounded-lg">
+              {error}
+            </div>
           )}
 
-          <Button type="submit" className="w-full" size="lg" isLoading={loading}>
+          <div className="text-right">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Forgot password?
+            </Link>
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full"
+            size="lg"
+            isLoading={loading}
+          >
             Sign In
           </Button>
         </form>
 
         <div className="mt-6 text-center text-sm">
           <span className="text-neutral-600">Don&apos;t have an account? </span>
-          <Link href="/register" className="text-primary-600 hover:text-primary-700 font-medium">
+          <Link
+            href="/register"
+            className="text-primary-600 hover:text-primary-700 font-medium"
+          >
             Sign Up
           </Link>
         </div>

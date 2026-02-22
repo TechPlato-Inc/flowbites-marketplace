@@ -42,6 +42,11 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  discount: {
+    type: Number,
+    default: 0,
+  },
+  couponCode: String,
   total: {
     type: Number,
     required: true
@@ -54,7 +59,7 @@ const orderSchema = new mongoose.Schema({
   // Payment
   status: {
     type: String,
-    enum: ['pending', 'paid', 'failed', 'refunded'],
+    enum: ['pending', 'paid', 'failed', 'refunded', 'expired'],
     default: 'pending'
   },
   paymentMethod: {
@@ -77,6 +82,9 @@ const orderSchema = new mongoose.Schema({
 orderSchema.index({ buyerId: 1, createdAt: -1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
+orderSchema.index({ stripeChargeId: 1 });
+orderSchema.index({ stripePaymentIntentId: 1 });
+orderSchema.index({ status: 1, createdAt: -1 });
 
 // Auto-generate order number
 orderSchema.pre('save', async function(next) {

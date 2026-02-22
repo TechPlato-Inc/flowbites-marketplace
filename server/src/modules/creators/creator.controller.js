@@ -1,8 +1,27 @@
 import { CreatorService } from './creator.service.js';
+import {
+  createConnectAccount,
+  getConnectStatus as getStripeConnectStatus,
+  getStripeDashboardLink,
+} from '../../services/stripeConnect.js';
 
 const creatorService = new CreatorService();
 
 export class CreatorController {
+  async getAll(req, res, next) {
+    try {
+      const data = await creatorService.getAll({
+        page: parseInt(req.query.page) || 1,
+        limit: parseInt(req.query.limit) || 24,
+        q: req.query.q,
+        sort: req.query.sort,
+      });
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getPublicProfile(req, res, next) {
     try {
       const profile = await creatorService.getPublicProfile(req.params.identifier);
@@ -132,6 +151,35 @@ export class CreatorController {
     try {
       const data = await creatorService.searchCreators(req.query.q || '', req.user._id);
       res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ── Stripe Connect ──
+
+  async connectStripe(req, res, next) {
+    try {
+      const result = await createConnectAccount(req.user._id);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getConnectStatus(req, res, next) {
+    try {
+      const result = await getStripeConnectStatus(req.user._id);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getStripeDashboard(req, res, next) {
+    try {
+      const result = await getStripeDashboardLink(req.user._id);
+      res.json({ success: true, data: result });
     } catch (error) {
       next(error);
     }

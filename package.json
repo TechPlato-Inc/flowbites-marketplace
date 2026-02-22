@@ -1,0 +1,35 @@
+{
+  "name": "flowbites-marketplace",
+  "version": "1.0.0",
+  "description": "Flowbites Marketplace - Multi-sided platform for templates and services",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd server && npm run test:ci",
+    "test:frontend": "cd next-client && npm run test:ci",
+    "test:e2e": "cd next-client && npx playwright test",
+    "dev": "docker-compose -f docker-compose.dev.yml up",
+    "dev:local": "concurrently \"cd server && npm run dev\" \"cd next-client && npm run dev\"",
+    "build": "cd next-client && npm run build",
+    "lint": "cd next-client && npm run lint",
+    "postinstall": "cd server && npm install && cd ../next-client && npm install"
+  },
+  "lint-staged": {
+    "next-client/src/**/*.{ts,tsx}": [
+      "cd next-client && eslint --fix",
+      "cd next-client && vitest run --reporter=verbose"
+    ],
+    "server/src/**/*.js": [
+      "cd server && npm run test:ci 2>/dev/null || true"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

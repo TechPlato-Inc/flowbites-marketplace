@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from "next/link";
 import {
   ArrowRight,
   ChevronRight,
@@ -10,17 +10,17 @@ import {
   Globe,
   Palette,
   Sparkles,
-} from 'lucide-react';
-import { Button } from '@/design-system';
+} from "lucide-react";
+import { Button } from "@/design-system";
 
-export const dynamic = 'force-static';
+export const dynamic = "force-static";
 
 export const metadata = {
-  title: 'About Us — Flowbites',
+  title: "About Flowbites — Premium Template Publisher",
   description:
-    'Flowbites is the curated marketplace for premium no-code templates. We connect talented designers with creative professionals who want to build faster.',
+    "Flowbites offers a premium collection of Webflow templates, UI kits, and Figma designs to help creators build stunning projects faster.",
   alternates: {
-    canonical: '/about',
+    canonical: "/about",
   },
 };
 
@@ -42,14 +42,15 @@ export default function AboutPage() {
             About Flowbites
           </p>
           <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-[1.08] tracking-tight mb-8 reveal">
-            We believe every creator
+            Premium templates,
             <br />
-            deserves great tools
+            crafted with care
           </h1>
           <p className="text-neutral-400 text-base md:text-lg max-w-2xl mx-auto leading-relaxed reveal">
-            Flowbites is the curated marketplace for premium no-code templates.
-            We connect talented designers with creative professionals who want
-            to build faster — without compromising on quality.
+            Flowbites is a premium template publisher offering a curated
+            collection of Webflow templates, UI kits, and Figma designs. We help
+            creators build stunning projects faster — with quality at the heart
+            of everything we do.
           </p>
         </div>
       </section>
@@ -62,29 +63,29 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-2 gap-12 lg:gap-20 items-start">
             <div>
               <h2 className="font-display text-3xl md:text-4xl font-bold text-neutral-900 leading-tight mb-6">
-                Started in 2022 with a
-                <span className="text-primary-500"> simple idea</span>
+                Crafting quality templates
+                <span className="text-primary-500"> since day one</span>
               </h2>
               <p className="text-neutral-500 text-[15px] leading-relaxed">
-                We noticed something broken: talented template designers were
-                scattered across dozens of platforms, and buyers had no way to
-                find quality work without sifting through thousands of mediocre
-                listings. So we built a marketplace that&apos;s curated from day one
-                — every template hand-reviewed, every creator personally vetted.
+                Flowbites was founded with a clear mission: to provide creators
+                with premium, professionally designed templates that save time
+                without sacrificing quality. Every template in our collection is
+                carefully crafted and thoroughly tested to ensure it meets the
+                highest standards of design and functionality.
               </p>
             </div>
             <div>
               <p className="text-neutral-500 text-[15px] leading-relaxed mb-6">
-                Today, Flowbites is the go-to destination for premium Webflow,
-                Framer, and Wix Studio templates. We&apos;ve paid millions to
-                independent creators, helped thousands of teams ship faster,
-                and built a community that genuinely cares about craft.
+                Today, Flowbites offers a diverse range of templates across
+                multiple platforms including Webflow, Framer, and Figma. Our
+                templates power thousands of projects worldwide, from startups
+                and agencies to personal portfolios and e-commerce stores.
               </p>
               <p className="text-neutral-500 text-[15px] leading-relaxed">
-                We&apos;re still a small, remote-first team — and that&apos;s by design.
-                Staying lean means we can move fast, stay close to our users,
-                and keep quality as our north star instead of growth at all
-                costs.
+                We believe that great design should be accessible to everyone.
+                That&apos;s why we&apos;re committed to creating templates that
+                are not only beautiful but also easy to customize — empowering
+                creators of all skill levels to bring their vision to life.
               </p>
             </div>
           </div>
@@ -110,27 +111,27 @@ export default function AboutPage() {
             {[
               {
                 icon: Palette,
-                title: 'Craft over quantity',
+                title: "Craft over quantity",
                 desc: "We'd rather have 500 exceptional templates than 50,000 mediocre ones. Every listing is hand-reviewed before it goes live.",
-                color: 'bg-primary-50 text-primary-500',
+                color: "bg-primary-50 text-primary-500",
               },
               {
                 icon: Users,
-                title: 'Creators first',
+                title: "Creators first",
                 desc: "Designers keep 85% of every sale. We succeed when our creators succeed — it's that simple.",
-                color: 'bg-secondary-50 text-secondary-500',
+                color: "bg-secondary-50 text-secondary-500",
               },
               {
                 icon: Globe,
-                title: 'Open to everyone',
-                desc: 'Templates that work globally, licenses that make sense, and pricing that respects creators at every level.',
-                color: 'bg-emerald-50 text-emerald-500',
+                title: "Open to everyone",
+                desc: "Templates that work globally, licenses that make sense, and pricing that respects creators at every level.",
+                color: "bg-emerald-50 text-emerald-500",
               },
               {
                 icon: Sparkles,
                 title: "Ship, don't polish",
-                desc: 'We move fast and iterate in the open. Our users get new features weekly, not quarterly.',
-                color: 'bg-amber-50 text-amber-500',
+                desc: "We move fast and iterate in the open. Our users get new features weekly, not quarterly.",
+                color: "bg-amber-50 text-amber-500",
               },
             ].map((value) => (
               <div
@@ -161,10 +162,10 @@ export default function AboutPage() {
         <div className="max-w-6xl mx-auto px-4 md:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             {[
-              { stat: '$2.8M+', label: 'Paid to creators' },
-              { stat: '3', label: 'Platforms supported' },
-              { stat: '85%', label: 'Creator revenue share' },
-              { stat: '2022', label: 'Founded' },
+              { stat: "$2.8M+", label: "Paid to creators" },
+              { stat: "3", label: "Platforms supported" },
+              { stat: "85%", label: "Creator revenue share" },
+              { stat: "2022", label: "Founded" },
             ].map((item) => (
               <div key={item.label} className="text-center">
                 <p className="font-display text-3xl md:text-4xl font-extrabold text-neutral-900 tracking-tight mb-1">
@@ -186,17 +187,20 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-2 gap-10 lg:gap-16 items-center">
             <div>
               <h2 className="font-display text-3xl md:text-4xl font-bold text-neutral-900 leading-tight mb-6">
-                Platform-native templates,{' '}
+                Platform-native templates,{" "}
                 <span className="text-primary-500">zero friction</span>
               </h2>
               <p className="text-neutral-500 text-[15px] leading-relaxed mb-8 max-w-lg">
-                Clone or remix directly into your Webflow, Framer, or Wix
-                Studio workspace with one click. No zip files, no broken
-                imports, no compatibility headaches. Just open and start
-                building.
+                Clone or remix directly into your Webflow, Framer, or Wix Studio
+                workspace with one click. No zip files, no broken imports, no
+                compatibility headaches. Just open and start building.
               </p>
               <Link href="/templates">
-                <Button variant="primary" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                <Button
+                  variant="primary"
+                  size="md"
+                  rightIcon={<ArrowRight className="w-4 h-4" />}
+                >
                   Browse templates
                 </Button>
               </Link>
@@ -246,17 +250,20 @@ export default function AboutPage() {
             </div>
             <div className="order-1 md:order-2">
               <h2 className="font-display text-3xl md:text-4xl font-bold text-neutral-900 leading-tight mb-6">
-                Buy once,{' '}
-                <span className="text-primary-500">use forever</span>
+                Buy once, <span className="text-primary-500">use forever</span>
               </h2>
               <p className="text-neutral-500 text-[15px] leading-relaxed mb-8 max-w-lg">
-                Every template comes with a perpetual commercial license.
-                Build client projects, launch your startup, sell products —
-                no recurring fees, no usage limits, no surprises. Your
-                license never expires.
+                Every template comes with a perpetual commercial license. Build
+                client projects, launch your startup, sell products — no
+                recurring fees, no usage limits, no surprises. Your license
+                never expires.
               </p>
               <Link href="/licenses">
-                <Button variant="outline" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                <Button
+                  variant="outline"
+                  size="md"
+                  rightIcon={<ArrowRight className="w-4 h-4" />}
+                >
                   View license details
                 </Button>
               </Link>
@@ -287,7 +294,8 @@ export default function AboutPage() {
               <p className="text-neutral-700 text-base leading-relaxed mb-6">
                 &ldquo;Flowbites cut our project timeline in half. We cloned a
                 Webflow template on Monday and shipped the client site by
-                Wednesday. The quality is production-ready out of the box.&rdquo;
+                Wednesday. The quality is production-ready out of the
+                box.&rdquo;
               </p>
               <div>
                 <p className="font-semibold text-neutral-900 text-sm">
@@ -309,9 +317,9 @@ export default function AboutPage() {
                 ))}
               </div>
               <p className="text-neutral-700 text-base leading-relaxed mb-6">
-                &ldquo;As a solo freelancer, Flowbites is my secret weapon. I&apos;ve
-                sold 40+ templates and built a real passive income stream.
-                The creator tools are best-in-class.&rdquo;
+                &ldquo;As a solo freelancer, Flowbites is my secret weapon.
+                I&apos;ve sold 40+ templates and built a real passive income
+                stream. The creator tools are best-in-class.&rdquo;
               </p>
               <div>
                 <p className="font-semibold text-neutral-900 text-sm">
@@ -343,23 +351,23 @@ export default function AboutPage() {
             {[
               {
                 icon: Shield,
-                label: 'Quality Guarantee',
-                desc: 'Every template hand-reviewed before listing',
+                label: "Quality Guarantee",
+                desc: "Every template hand-reviewed before listing",
               },
               {
                 icon: Heart,
-                label: 'Fair Revenue Share',
-                desc: '85% earnings go directly to creators',
+                label: "Fair Revenue Share",
+                desc: "85% earnings go directly to creators",
               },
               {
                 icon: Zap,
-                label: 'Instant Delivery',
-                desc: 'Clone or remix links — no file downloads',
+                label: "Instant Delivery",
+                desc: "Clone or remix links — no file downloads",
               },
               {
                 icon: Star,
-                label: 'Lifetime License',
-                desc: 'Commercial use, perpetual, unlimited projects',
+                label: "Lifetime License",
+                desc: "Commercial use, perpetual, unlimited projects",
               },
             ].map((item) => (
               <div key={item.label} className="text-center">
@@ -379,10 +387,10 @@ export default function AboutPage() {
           <div className="mt-12 pt-10 border-t border-neutral-100">
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
               {[
-                { label: 'License Terms', href: '/licenses' },
-                { label: 'Privacy Policy', href: '/privacy' },
-                { label: 'Terms of Service', href: '/terms' },
-                { label: 'Cookie Policy', href: '/cookies' },
+                { label: "License Terms", href: "/licenses" },
+                { label: "Privacy Policy", href: "/privacy" },
+                { label: "Terms of Service", href: "/terms" },
+                { label: "Cookie Policy", href: "/cookies" },
               ].map((policy) => (
                 <Link
                   key={policy.label}
@@ -411,18 +419,26 @@ export default function AboutPage() {
             Come build with us
           </h2>
           <p className="text-neutral-400 text-[15px] leading-relaxed mb-10 max-w-xl mx-auto">
-            Flowbites is a remote-first team driven by craft and community.
-            If you care about great design and want to make an impact, we&apos;d
+            Flowbites is a remote-first team driven by craft and community. If
+            you care about great design and want to make an impact, we&apos;d
             love to hear from you.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link href="/careers">
-              <Button variant="primary" size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
+              <Button
+                variant="primary"
+                size="lg"
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+              >
                 View open roles
               </Button>
             </Link>
             <Link href="/community">
-              <Button variant="ghost" size="lg" className="!text-neutral-300 hover:!text-white">
+              <Button
+                variant="ghost"
+                size="lg"
+                className="!text-neutral-300 hover:!text-white"
+              >
                 Join the community
               </Button>
             </Link>

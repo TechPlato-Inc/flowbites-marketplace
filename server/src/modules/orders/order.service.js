@@ -60,8 +60,8 @@ export class OrderService {
     return order;
   }
 
-  async mockCheckout(orderId) {
-    const order = await Order.findById(orderId);
+  async mockCheckout(orderId, userId) {
+    const order = await Order.findOne({ _id: orderId, buyerId: userId });
     if (!order) {
       throw new AppError('Order not found', 404);
     }

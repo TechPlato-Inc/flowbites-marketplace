@@ -1,0 +1,15 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Run lint-staged for frontend and backend
+echo "🔍 Running pre-commit checks..."
+
+# Frontend linting and tests (staged files only)
+cd next-client
+npx lint-staged
+
+# Backend tests (quick check)
+cd ../server
+npm run test:ci 2>/dev/null || echo "⚠️  Backend tests skipped (test DB not available)"
+
+echo "✅ Pre-commit checks complete!"

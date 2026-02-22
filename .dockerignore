@@ -1,62 +1,31 @@
-# =============================================================================
-# Flowbites Marketplace - Docker Ignore
-# =============================================================================
-
-# Dependencies (will be installed during build)
+# Dependencies
 **/node_modules
 
-# Build output (will be generated during build)
-client/dist
+# Build outputs
+**/.next
+**/dist
+**/build
 
-# Environment files (secrets should be passed via docker-compose env)
+# VCS and local metadata
+.git
+.gitignore
+.DS_Store
+.vscode
+.idea
+
+# Environment / secrets
 **/.env
 **/.env.local
 **/.env.*.local
-
-# Git
-.git
-.gitignore
-
-# Documentation
-*.md
-LICENSE
-
-# IDE / Editor
-.vscode
-.idea
-*.swp
-*.swo
-*~
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Docker files (avoid recursive copy)
-docker-compose*.yml
-Dockerfile
-.dockerignore
-
-# Nginx config (mounted separately)
-nginx.conf
 
 # Logs
 **/*.log
 **/npm-debug.log*
 
-# Test files
+# Docs and tests (not needed in runtime images)
+docs
 **/__tests__
+**/tests
 **/*.test.*
 **/*.spec.*
 **/coverage
-
-# Uploaded template files - not needed in image (mounted as volume)
-server/uploads/templates/*
-!server/uploads/.gitkeep
-
-# Misc
-.env.example
-PROJECT_STRUCTURE.txt
-DESIGN_SYSTEM.md
-QUICKSTART.md
-STRATEGY.md

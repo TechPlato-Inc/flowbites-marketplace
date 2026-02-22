@@ -106,16 +106,53 @@ const seed = async () => {
     );
     console.log(`✅ Created ${tags.length} tags`);
 
-    // Create admin user
-    const admin = await User.create({
+    // Create SUPER ADMIN - has full control over everything
+    const superAdmin = await User.create({
+      email: 'superadmin@flowbites.com',
+      password: 'superadmin2024!',
+      name: 'Super Administrator',
+      role: 'super_admin',
+      isActive: true,
+      emailVerified: true
+    });
+    console.log('✅ Created Super Admin');
+
+    // Create Flowbites Team Admin - manages flowbites marketplace AND is also a creator
+    const flowbitesAdmin = await User.create({
       email: 'admin@flowbites.com',
-      password: 'password123',
-      name: 'Admin User',
+      password: 'flowbites2024!',
+      name: 'Flowbites Administrator',
       role: 'admin',
       isActive: true,
       emailVerified: true
     });
-    console.log('✅ Created admin user');
+    console.log('✅ Created Flowbites Admin');
+
+    // Create Flowbites Admin's creator profile (dual role: admin + creator)
+    const flowbitesAdminProfile = await CreatorProfile.create({
+      userId: flowbitesAdmin._id,
+      displayName: 'Flowbites',
+      username: 'flowbites',
+      bio: 'Official Flowbites marketplace. Premium Webflow templates, UI kits, and Figma designs crafted by our expert team.',
+      website: 'https://flowbites.com',
+      twitter: 'flowbites',
+      isVerified: true,
+      isOfficial: true, // Mark as official Flowbites account
+      onboarding: {
+        status: 'approved',
+        completedSteps: ['personal_info', 'government_id', 'selfie_verification', 'bank_details', 'creator_reference'],
+        submittedAt: new Date('2024-01-01'),
+        reviewedAt: new Date('2024-01-01')
+      },
+      stats: {
+        totalSales: 1250,
+        totalRevenue: 98500,
+        templateCount: 12,
+        averageRating: 4.9,
+        totalReviews: 456
+      }
+    });
+    console.log('✅ Created Flowbites Admin Creator Profile (dual role)');
 
     // Create buyers
     const buyers = await User.create([
@@ -136,7 +173,11 @@ const seed = async () => {
     ]);
     console.log(`✅ Created ${buyers.length} buyers`);
 
-    // Create creators
+    // Note: Flowbites Admin (admin@flowbites.com) also has a creator profile
+    // This allows the marketplace owner to publish official "Made by Flowbites" templates
+    // Community creators are separate accounts managed by the admin
+
+    // Create community creators
     const creators = await User.create([
       {
         email: 'creator1@example.com',
@@ -153,9 +194,9 @@ const seed = async () => {
         emailVerified: true
       }
     ]);
-    console.log(`✅ Created ${creators.length} creators`);
+    console.log(`✅ Created ${creators.length} community creators`);
 
-    // Create creator profiles
+    // Create community creator profiles
     const creatorProfiles = await CreatorProfile.create([
       {
         userId: creators[0]._id,
@@ -166,6 +207,12 @@ const seed = async () => {
         twitter: 'alexrivera',
         github: 'alexrivera',
         isVerified: true,
+        onboarding: {
+          status: 'approved',
+          completedSteps: ['personal_info', 'government_id', 'selfie_verification', 'bank_details', 'creator_reference'],
+          submittedAt: new Date('2024-01-15'),
+          reviewedAt: new Date('2024-01-16')
+        },
         stats: {
           totalSales: 45,
           totalRevenue: 3450,
@@ -183,6 +230,12 @@ const seed = async () => {
         dribbble: 'mariachen',
         github: 'mariachen',
         isVerified: true,
+        onboarding: {
+          status: 'approved',
+          completedSteps: ['personal_info', 'government_id', 'selfie_verification', 'bank_details', 'creator_reference'],
+          submittedAt: new Date('2024-02-01'),
+          reviewedAt: new Date('2024-02-02')
+        },
         stats: {
           totalSales: 67,
           totalRevenue: 5230,
@@ -192,7 +245,7 @@ const seed = async () => {
         }
       }
     ]);
-    console.log(`✅ Created ${creatorProfiles.length} creator profiles`);
+    console.log(`✅ Created ${creatorProfiles.length} community creator profiles`);
 
     // Helper to find tag IDs by names
     const getTagIds = (names) => names.map(name => tags.find(t => t.name === name)?._id).filter(Boolean);
@@ -203,14 +256,16 @@ const seed = async () => {
         title: 'Modern SaaS Dashboard Pro',
         slug: 'modern-saas-dashboard-pro',
         description: 'A comprehensive Webflow dashboard template with beautiful charts, tables, and analytics.\n\nFeatures:\n• 50+ UI components\n• Dark/Light mode\n• Responsive design\n• CMS integration',
-        creatorId: creators[0]._id,
-        creatorProfileId: creatorProfiles[0]._id,
+        creatorId: flowbitesAdmin._id,
+        creatorProfileId: flowbitesAdminProfile._id,
         platform: 'webflow',
         category: categories.find(c => c.slug === 'technology')._id,
         tags: getTagIds(['saas', 'software', 'startup']),
-        price: 79,
-        thumbnail: 'flowdark-full.webp',
-        gallery: ['gallery-1.webp', 'gallery-2.webp', 'gallery-3.webp'],
+        price: 99,
+        salePrice: 79,
+        madeByFlowbites: true,
+        thumbnail: 'dashboard-thumb.svg',
+        gallery: ['dashboard-1.svg', 'dashboard-2.svg', 'dashboard-3.svg'],
         templateFile: 'saas-dashboard-pro.zip',
         fileSize: 15728640,
         licenseType: 'commercial',
@@ -219,21 +274,23 @@ const seed = async () => {
         demoUrl: 'https://demo.flowbites.com/saas-dashboard',
         version: '2.1.0',
         stats: { views: 1247, purchases: 45, revenue: 3555, likes: 189, downloads: 45 },
-        moderatedBy: admin._id,
+        moderatedBy: superAdmin._id,
         moderatedAt: new Date('2026-02-10')
       },
       {
         title: 'Startup Landing Page Kit',
         slug: 'startup-landing-page-kit',
         description: 'Beautiful Framer landing page template for startups and SaaS. Includes hero, features, pricing, testimonials.\n\n• 5 complete layouts\n• 30+ sections\n• SEO optimized\n• Mobile-first design',
-        creatorId: creators[1]._id,
-        creatorProfileId: creatorProfiles[1]._id,
+        creatorId: flowbitesAdmin._id,
+        creatorProfileId: flowbitesAdminProfile._id,
         platform: 'framer',
         category: categories.find(c => c.slug === 'launch-coming-soon')._id,
         tags: getTagIds(['launch', 'startup']),
         price: 49,
-        thumbnail: 'agentra-full.webp',
-        gallery: ['gallery-4.webp', 'gallery-5.webp'],
+        salePrice: null,
+        madeByFlowbites: true,
+        thumbnail: 'landing-thumb.svg',
+        gallery: ['landing-1.svg', 'landing-2.svg'],
         templateFile: 'startup-landing-kit.zip',
         fileSize: 8388608,
         licenseType: 'commercial',
@@ -241,21 +298,23 @@ const seed = async () => {
         demoUrl: 'https://demo.flowbites.com/startup-landing',
         version: '1.0.0',
         stats: { views: 832, purchases: 22, revenue: 1078, likes: 67, downloads: 22 },
-        moderatedBy: admin._id,
+        moderatedBy: superAdmin._id,
         moderatedAt: new Date('2026-02-08')
       },
       {
         title: 'Elegant Portfolio Studio',
         slug: 'elegant-portfolio-studio',
         description: 'Showcase your creative work with this minimal Webflow portfolio. Perfect for designers, photographers, and agencies.\n\n• Filterable project grid\n• Smooth animations\n• Contact form\n• Blog integration',
-        creatorId: creators[0]._id,
-        creatorProfileId: creatorProfiles[0]._id,
+        creatorId: flowbitesAdmin._id,
+        creatorProfileId: flowbitesAdminProfile._id,
         platform: 'webflow',
         category: categories.find(c => c.slug === 'portfolio-agency')._id,
         tags: getTagIds(['portfolio', 'agency', 'creative']),
         price: 59,
-        thumbnail: 'ethanfolio-full.webp',
-        gallery: ['ethanfolio-detail.webp', 'gallery-6.webp'],
+        salePrice: null,
+        madeByFlowbites: true,
+        thumbnail: 'portfolio-thumb.svg',
+        gallery: ['portfolio-1.svg', 'portfolio-2.svg'],
         templateFile: 'elegant-portfolio.zip',
         fileSize: 12582912,
         licenseType: 'commercial',
@@ -264,21 +323,23 @@ const seed = async () => {
         demoUrl: 'https://demo.flowbites.com/elegant-portfolio',
         version: '1.3.0',
         stats: { views: 2103, purchases: 67, revenue: 3953, likes: 312, downloads: 67 },
-        moderatedBy: admin._id,
+        moderatedBy: superAdmin._id,
         moderatedAt: new Date('2026-01-20')
       },
       {
         title: 'Flavor Kitchen — Restaurant Template',
         slug: 'flavor-kitchen-restaurant',
         description: 'A mouth-watering Wix restaurant template with online menu, reservations, and delivery integration.\n\n• Interactive menu with categories\n• Table reservation system\n• Image gallery\n• Google Maps integration',
-        creatorId: creators[1]._id,
-        creatorProfileId: creatorProfiles[1]._id,
+        creatorId: flowbitesAdmin._id,
+        creatorProfileId: flowbitesAdminProfile._id,
         platform: 'wix',
         category: categories.find(c => c.slug === 'food-drink')._id,
         tags: getTagIds(['restaurant', 'cafe', 'food']),
         price: 39,
-        thumbnail: 'flowence-full.webp',
-        gallery: ['flowence-thumb.webp', 'gallery-7.webp'],
+        salePrice: null,
+        madeByFlowbites: true,
+        thumbnail: 'restaurant-thumb.svg',
+        gallery: ['restaurant-1.svg', 'restaurant-2.svg'],
         templateFile: 'flavor-kitchen.zip',
         fileSize: 9437184,
         licenseType: 'commercial',
@@ -286,21 +347,23 @@ const seed = async () => {
         demoUrl: 'https://demo.flowbites.com/flavor-kitchen',
         version: '1.1.0',
         stats: { views: 654, purchases: 18, revenue: 702, likes: 89, downloads: 18 },
-        moderatedBy: admin._id,
+        moderatedBy: superAdmin._id,
         moderatedAt: new Date('2026-02-01')
       },
       {
         title: 'MedCare Health Clinic',
         slug: 'medcare-health-clinic',
         description: 'Professional Framer template for healthcare clinics, doctors, and medical practices.\n\n• Appointment booking\n• Doctor profiles\n• Service listing\n• Patient testimonials',
-        creatorId: creators[0]._id,
-        creatorProfileId: creatorProfiles[0]._id,
+        creatorId: flowbitesAdmin._id,
+        creatorProfileId: flowbitesAdminProfile._id,
         platform: 'framer',
         category: categories.find(c => c.slug === 'medical')._id,
         tags: getTagIds(['medical', 'clinic', 'doctor']),
         price: 69,
-        thumbnail: 'wealth-full.webp',
-        gallery: ['gallery-8.webp', 'gallery-9.webp'],
+        salePrice: null,
+        madeByFlowbites: true,
+        thumbnail: 'medcare-thumb.svg',
+        gallery: ['medcare-1.svg', 'medcare-2.svg'],
         templateFile: 'medcare-clinic.zip',
         fileSize: 11534336,
         licenseType: 'commercial',
@@ -308,21 +371,23 @@ const seed = async () => {
         demoUrl: 'https://demo.flowbites.com/medcare',
         version: '1.0.0',
         stats: { views: 489, purchases: 12, revenue: 828, likes: 56, downloads: 12 },
-        moderatedBy: admin._id,
+        moderatedBy: superAdmin._id,
         moderatedAt: new Date('2026-02-05')
       },
       {
         title: 'LearnHub — Online Course Platform',
         slug: 'learnhub-course-platform',
         description: 'A feature-rich Webflow template for online education platforms and course creators.\n\n• Course catalog with filters\n• Student dashboard\n• Lesson player layout\n• Instructor profiles',
-        creatorId: creators[1]._id,
-        creatorProfileId: creatorProfiles[1]._id,
+        creatorId: flowbitesAdmin._id,
+        creatorProfileId: flowbitesAdminProfile._id,
         platform: 'webflow',
         category: categories.find(c => c.slug === 'education')._id,
         tags: getTagIds(['education', 'course', 'learning']),
-        price: 89,
-        thumbnail: 'lucasflow-full.webp',
-        gallery: ['gallery-10.webp', 'gallery-11.webp', 'gallery-12.webp'],
+        price: 119,
+        salePrice: 89,
+        madeByFlowbites: true,
+        thumbnail: 'learnhub-thumb.svg',
+        gallery: ['learnhub-1.svg', 'learnhub-2.svg', 'learnhub-3.svg'],
         templateFile: 'learnhub-platform.zip',
         fileSize: 18874368,
         licenseType: 'commercial',
@@ -331,21 +396,23 @@ const seed = async () => {
         demoUrl: 'https://demo.flowbites.com/learnhub',
         version: '2.0.0',
         stats: { views: 1876, purchases: 34, revenue: 3026, likes: 245, downloads: 34 },
-        moderatedBy: admin._id,
+        moderatedBy: superAdmin._id,
         moderatedAt: new Date('2026-01-15')
       },
       {
         title: 'RealHome Property Listings',
         slug: 'realhome-property-listings',
         description: 'Wix real estate template with property search, listings, and agent profiles.\n\n• Advanced property search\n• Map view integration\n• Agent directory\n• Virtual tour support',
-        creatorId: creators[0]._id,
-        creatorProfileId: creatorProfiles[0]._id,
+        creatorId: flowbitesAdmin._id,
+        creatorProfileId: flowbitesAdminProfile._id,
         platform: 'wix',
         category: categories.find(c => c.slug === 'real-estate')._id,
         tags: getTagIds(['real-estate', 'realtor', 'housing']),
         price: 69,
-        thumbnail: 'flowperty-thumb.webp',
-        gallery: ['flowperty-small.webp', 'gallery-13.webp'],
+        salePrice: null,
+        madeByFlowbites: true,
+        thumbnail: 'realhome-thumb.svg',
+        gallery: ['realhome-1.svg', 'realhome-2.svg'],
         templateFile: 'realhome-listings.zip',
         fileSize: 14680064,
         licenseType: 'commercial',
@@ -353,21 +420,23 @@ const seed = async () => {
         demoUrl: 'https://demo.flowbites.com/realhome',
         version: '1.2.0',
         stats: { views: 723, purchases: 15, revenue: 1035, likes: 98, downloads: 15 },
-        moderatedBy: admin._id,
+        moderatedBy: superAdmin._id,
         moderatedAt: new Date('2026-01-28')
       },
       {
         title: 'Wanderlust Travel Agency',
         slug: 'wanderlust-travel-agency',
         description: 'Stunning Framer template for travel agencies and tour operators.\n\n• Destination showcase\n• Tour packages\n• Booking inquiry form\n• Photo galleries',
-        creatorId: creators[1]._id,
-        creatorProfileId: creatorProfiles[1]._id,
+        creatorId: flowbitesAdmin._id,
+        creatorProfileId: flowbitesAdminProfile._id,
         platform: 'framer',
         category: categories.find(c => c.slug === 'travel')._id,
         tags: getTagIds(['travel', 'tourism', 'hotel']),
         price: 55,
-        thumbnail: 'monexa-full.webp',
-        gallery: ['monexa-thumb.webp', 'gallery-14.webp'],
+        salePrice: null,
+        madeByFlowbites: true,
+        thumbnail: 'wanderlust-thumb.svg',
+        gallery: ['wanderlust-1.svg', 'wanderlust-2.svg'],
         templateFile: 'wanderlust-travel.zip',
         fileSize: 10485760,
         licenseType: 'commercial',
@@ -375,21 +444,23 @@ const seed = async () => {
         demoUrl: 'https://demo.flowbites.com/wanderlust',
         version: '1.0.0',
         stats: { views: 567, purchases: 9, revenue: 495, likes: 73, downloads: 9 },
-        moderatedBy: admin._id,
+        moderatedBy: superAdmin._id,
         moderatedAt: new Date('2026-02-03')
       },
       {
         title: 'ShopNest E-Commerce Starter',
         slug: 'shopnest-ecommerce-starter',
         description: 'Complete Webflow e-commerce template for online stores.\n\n• Product catalog with filters\n• Shopping cart\n• Checkout flow\n• Order tracking',
-        creatorId: creators[0]._id,
-        creatorProfileId: creatorProfiles[0]._id,
+        creatorId: flowbitesAdmin._id,
+        creatorProfileId: flowbitesAdminProfile._id,
         platform: 'webflow',
         category: categories.find(c => c.slug === 'retail-ecommerce')._id,
         tags: getTagIds(['ecommerce', 'retail', 'shop']),
-        price: 99,
-        thumbnail: 'aitech-full.webp',
-        gallery: ['gallery-15.webp', 'landing-ui.webp', 'platform.webp'],
+        price: 129,
+        salePrice: 99,
+        madeByFlowbites: true,
+        thumbnail: 'shopnest-thumb.svg',
+        gallery: ['shopnest-1.svg', 'shopnest-2.svg', 'shopnest-3.svg'],
         templateFile: 'shopnest-ecommerce.zip',
         fileSize: 20971520,
         licenseType: 'commercial',
@@ -398,21 +469,23 @@ const seed = async () => {
         demoUrl: 'https://demo.flowbites.com/shopnest',
         version: '3.0.0',
         stats: { views: 3412, purchases: 89, revenue: 8811, likes: 456, downloads: 89 },
-        moderatedBy: admin._id,
+        moderatedBy: superAdmin._id,
         moderatedAt: new Date('2026-01-10')
       },
       {
         title: 'GlowUp Beauty Salon',
         slug: 'glowup-beauty-salon',
         description: 'Elegant Wix template for beauty salons, spas, and hair studios.\n\n• Service catalog\n• Online booking\n• Team profiles\n• Before/after gallery',
-        creatorId: creators[1]._id,
-        creatorProfileId: creatorProfiles[1]._id,
+        creatorId: flowbitesAdmin._id,
+        creatorProfileId: flowbitesAdminProfile._id,
         platform: 'wix',
         category: categories.find(c => c.slug === 'hair-beauty')._id,
         tags: getTagIds(['beauty', 'hair', 'salon']),
         price: 45,
-        thumbnail: 'jamespark-thumb.webp',
-        gallery: ['jamesbond-thumb.webp', 'ui-templates.webp'],
+        salePrice: null,
+        madeByFlowbites: true,
+        thumbnail: 'glowup-thumb.svg',
+        gallery: ['glowup-1.svg', 'glowup-2.svg'],
         templateFile: 'glowup-salon.zip',
         fileSize: 8912896,
         licenseType: 'commercial',
@@ -420,21 +493,23 @@ const seed = async () => {
         demoUrl: 'https://demo.flowbites.com/glowup',
         version: '1.0.0',
         stats: { views: 412, purchases: 8, revenue: 360, likes: 54, downloads: 8 },
-        moderatedBy: admin._id,
+        moderatedBy: superAdmin._id,
         moderatedAt: new Date('2026-02-06')
       },
       {
         title: 'DocuFlow Documentation Kit',
         slug: 'docuflow-documentation-kit',
         description: 'Clean Framer documentation template for developer tools and APIs.\n\n• Sidebar navigation\n• Code syntax highlighting\n• Search functionality\n• Version selector',
-        creatorId: creators[0]._id,
-        creatorProfileId: creatorProfiles[0]._id,
+        creatorId: flowbitesAdmin._id,
+        creatorProfileId: flowbitesAdminProfile._id,
         platform: 'framer',
         category: categories.find(c => c.slug === 'documentation')._id,
         tags: getTagIds(['docs', 'documentation', 'guide']),
         price: 35,
-        thumbnail: 'flowfinc-full.webp',
-        gallery: ['homepage6-full.webp'],
+        salePrice: null,
+        madeByFlowbites: true,
+        thumbnail: 'docuflow-thumb.svg',
+        gallery: ['docuflow-1.svg'],
         templateFile: 'docuflow-docs.zip',
         fileSize: 6291456,
         licenseType: 'commercial',
@@ -447,14 +522,16 @@ const seed = async () => {
         title: 'FitLife Wellness Hub',
         slug: 'fitlife-wellness-hub',
         description: 'Dynamic Webflow template for gyms, fitness centers, and wellness brands.\n\n• Class schedule\n• Membership plans\n• Trainer profiles\n• Blog section',
-        creatorId: creators[1]._id,
-        creatorProfileId: creatorProfiles[1]._id,
+        creatorId: flowbitesAdmin._id,
+        creatorProfileId: flowbitesAdminProfile._id,
         platform: 'webflow',
         category: categories.find(c => c.slug === 'wellness')._id,
         tags: getTagIds(['wellness', 'fitness', 'yoga']),
         price: 59,
-        thumbnail: 'johnflow-full.png',
-        gallery: ['ethan-thumb.webp', 'gallery-3.webp'],
+        salePrice: null,
+        madeByFlowbites: true,
+        thumbnail: 'fitlife-thumb.svg',
+        gallery: ['fitlife-1.svg', 'fitlife-2.svg'],
         templateFile: 'fitlife-wellness.zip',
         fileSize: 13631488,
         licenseType: 'commercial',
@@ -462,7 +539,7 @@ const seed = async () => {
         demoUrl: 'https://demo.flowbites.com/fitlife',
         version: '1.5.0',
         stats: { views: 934, purchases: 28, revenue: 1652, likes: 142, downloads: 28 },
-        moderatedBy: admin._id,
+        moderatedBy: superAdmin._id,
         moderatedAt: new Date('2026-01-25')
       }
     ];
@@ -592,12 +669,14 @@ const seed = async () => {
 
     // Alex Rivera's services
     const sp1 = new ServicePackage({
-      creatorId: creators[0]._id,
+      creatorId: flowbitesAdmin._id,
       templateId: templates[0]._id,
       name: 'SaaS Dashboard Customization',
       description: 'I will customize the Modern SaaS Dashboard Pro template to match your brand and requirements. Includes color scheme updates, logo integration, custom pages, and CMS setup.',
       category: 'webflow-development',
       price: 250,
+        salePrice: null,
+        madeByFlowbites: true,
       deliveryDays: 5,
       revisions: 3,
       features: ['Brand color customization', 'Logo & favicon integration', 'Up to 3 custom pages', 'CMS collection setup', 'Responsive testing', 'Webflow hosting setup'],
@@ -610,12 +689,14 @@ const seed = async () => {
     servicePackages.push(sp1);
 
     const sp2 = new ServicePackage({
-      creatorId: creators[0]._id,
+      creatorId: flowbitesAdmin._id,
       templateId: templates[2]._id,
       name: 'Portfolio Website Setup',
       description: 'Full setup and customization of the Elegant Portfolio template. I will configure your portfolio with your projects, bio, and contact information.',
       category: 'webflow-development',
       price: 150,
+        salePrice: null,
+        madeByFlowbites: true,
       deliveryDays: 3,
       revisions: 2,
       features: ['Project content upload', 'Bio & about page setup', 'Contact form configuration', 'Domain connection', 'SEO basics'],
@@ -628,12 +709,14 @@ const seed = async () => {
     servicePackages.push(sp2);
 
     const sp3 = new ServicePackage({
-      creatorId: creators[0]._id,
+      creatorId: flowbitesAdmin._id,
       templateId: templates[6]._id,
       name: 'Real Estate Website Migration',
       description: 'Migrate your existing real estate website to Wix using the RealHome template. Includes content transfer and listing setup.',
       category: 'migration',
       price: 400,
+        salePrice: null,
+        madeByFlowbites: true,
       deliveryDays: 7,
       revisions: 0,
       features: ['Full content migration', 'Property listing import', 'Agent profile setup', 'Map integration', 'Contact form setup', 'SEO redirect mapping'],
@@ -647,12 +730,14 @@ const seed = async () => {
 
     // Maria Chen's services
     const sp4 = new ServicePackage({
-      creatorId: creators[1]._id,
+      creatorId: flowbitesAdmin._id,
       templateId: templates[1]._id,
       name: 'Startup Landing Page Design',
       description: 'Custom landing page design using the Startup Landing Page Kit. Perfect for product launches and SaaS products.',
       category: 'framer-development',
       price: 200,
+        salePrice: null,
+        madeByFlowbites: true,
       deliveryDays: 4,
       revisions: 3,
       features: ['Custom hero section', 'Feature sections', 'Pricing table setup', 'CTA optimization', 'Mobile responsive', 'Animation refinement'],
@@ -665,12 +750,14 @@ const seed = async () => {
     servicePackages.push(sp4);
 
     const sp5 = new ServicePackage({
-      creatorId: creators[1]._id,
+      creatorId: flowbitesAdmin._id,
       templateId: templates[5]._id,
       name: 'E-Learning Platform Customization',
       description: 'Customize LearnHub to build your online course platform. Includes course structure setup, branding, and CMS configuration.',
       category: 'webflow-development',
       price: 350,
+        salePrice: null,
+        madeByFlowbites: true,
       deliveryDays: 7,
       revisions: 2,
       features: ['Course catalog structure', 'Instructor profiles', 'CMS setup for lessons', 'Payment integration', 'Student dashboard', 'Email notification setup'],
@@ -683,12 +770,14 @@ const seed = async () => {
     servicePackages.push(sp5);
 
     const sp6 = new ServicePackage({
-      creatorId: creators[1]._id,
+      creatorId: flowbitesAdmin._id,
       templateId: templates[9]._id,
       name: 'Beauty Salon Brand Package',
       description: 'Complete brand identity and website setup for your beauty salon using the GlowUp template.',
       category: 'custom-design',
       price: 300,
+        salePrice: null,
+        madeByFlowbites: true,
       deliveryDays: 5,
       revisions: 3,
       features: ['Brand identity design', 'Service menu setup', 'Online booking integration', 'Gallery curation', 'Social media links', 'Google Business setup'],
@@ -710,7 +799,7 @@ const seed = async () => {
       orderNumber: 'SRV-20260210-00001',
       packageId: servicePackages[0]._id,
       buyerId: buyers[0]._id,
-      creatorId: creators[0]._id,
+      creatorId: flowbitesAdmin._id,
       templateId: templates[0]._id,
       packageName: servicePackages[0].name,
       price: servicePackages[0].price,
@@ -737,7 +826,7 @@ const seed = async () => {
       orderNumber: 'SRV-20260207-00002',
       packageId: servicePackages[3]._id,
       buyerId: buyers[1]._id,
-      creatorId: creators[1]._id,
+      creatorId: flowbitesAdmin._id,
       templateId: templates[1]._id,
       packageName: servicePackages[3].name,
       price: servicePackages[3].price,
@@ -766,7 +855,7 @@ const seed = async () => {
       orderNumber: 'SRV-20260204-00003',
       packageId: servicePackages[1]._id,
       buyerId: buyers[1]._id,
-      creatorId: creators[0]._id,
+      creatorId: flowbitesAdmin._id,
       templateId: templates[2]._id,
       packageName: servicePackages[1].name,
       price: servicePackages[1].price,
@@ -795,7 +884,7 @@ const seed = async () => {
       orderNumber: 'SRV-20260213-00004',
       packageId: servicePackages[4]._id,
       buyerId: buyers[0]._id,
-      creatorId: creators[1]._id,
+      creatorId: flowbitesAdmin._id,
       templateId: templates[5]._id,
       packageName: servicePackages[4].name,
       price: servicePackages[4].price,
@@ -815,7 +904,7 @@ const seed = async () => {
       orderNumber: 'SRV-20260206-00005',
       packageId: servicePackages[5]._id,
       buyerId: buyers[0]._id,
-      creatorId: creators[1]._id,
+      creatorId: flowbitesAdmin._id,
       templateId: templates[9]._id,
       packageName: servicePackages[5].name,
       price: servicePackages[5].price,
@@ -842,30 +931,30 @@ const seed = async () => {
     // Create UI Shots
     const shots = await UIShot.create([
       {
-        creatorId: creators[1]._id,
+        creatorId: flowbitesAdmin._id,
         title: 'Modern Dashboard Analytics View',
         description: 'Clean and minimal dashboard design with beautiful charts and KPI cards',
-        image: 'shot-dashboard.webp',
+        image: 'shot-dashboard.svg',
         templateId: templates[0]._id,
         tags: ['dashboard', 'analytics', 'dark-mode'],
         stats: { views: 892, likes: 134, saves: 67 },
         colors: ['#0ea5e9', '#8b5cf6', '#10b981']
       },
       {
-        creatorId: creators[0]._id,
+        creatorId: flowbitesAdmin._id,
         title: 'E-Commerce Product Card Variants',
         description: 'Four product card designs with hover effects and quick-add buttons',
-        image: 'shot-ecommerce.webp',
+        image: 'shot-ecommerce.svg',
         templateId: templates[8]._id,
         tags: ['ecommerce', 'product-card', 'ui'],
         stats: { views: 654, likes: 98, saves: 45 },
         colors: ['#f59e0b', '#ef4444', '#10b981']
       },
       {
-        creatorId: creators[1]._id,
+        creatorId: flowbitesAdmin._id,
         title: 'Travel Destination Hero Section',
         description: 'Full-width hero with parallax scrolling and destination search',
-        image: 'shot-travel.webp',
+        image: 'shot-travel.svg',
         templateId: templates[7]._id,
         tags: ['travel', 'hero', 'parallax'],
         stats: { views: 423, likes: 76, saves: 31 },
@@ -897,21 +986,19 @@ const seed = async () => {
     console.log('\n🎉 Database seeded successfully!');
     console.log('\n📝 Test Credentials:');
     console.log('─────────────────────────────────────────');
-    console.log('Admin:');
+    console.log('Super Admin (full system access):');
+    console.log('  Email: superadmin@flowbites.com');
+    console.log('  Password: superadmin2024!');
+    console.log('\nFlowbites Admin (marketplace admin + creator - dual role):');
     console.log('  Email: admin@flowbites.com');
-    console.log('  Password: password123');
-    console.log('\nCreator 1:');
-    console.log('  Email: creator1@example.com');
-    console.log('  Password: password123');
-    console.log('\nCreator 2:');
-    console.log('  Email: creator2@example.com');
-    console.log('  Password: password123');
-    console.log('\nBuyer 1:');
-    console.log('  Email: buyer1@example.com');
-    console.log('  Password: password123');
-    console.log('\nBuyer 2:');
-    console.log('  Email: buyer2@example.com');
-    console.log('  Password: password123');
+    console.log('  Password: flowbites2024!');
+    console.log('  Note: This account can manage the marketplace AND publish official Flowbites templates');
+    console.log('\nCommunity Creators:');
+    console.log('  Creator 1: creator1@example.com / password123');
+    console.log('  Creator 2: creator2@example.com / password123');
+    console.log('\nBuyers:');
+    console.log('  Buyer 1: buyer1@example.com / password123');
+    console.log('  Buyer 2: buyer2@example.com / password123');
     console.log('─────────────────────────────────────────\n');
 
     process.exit(0);

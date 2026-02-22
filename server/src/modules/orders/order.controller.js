@@ -16,7 +16,7 @@ export class OrderController {
   async mockCheckout(req, res, next) {
     try {
       const { orderId } = req.body;
-      const order = await orderService.mockCheckout(orderId);
+      const order = await orderService.mockCheckout(orderId, req.user._id);
       res.json({ success: true, data: order });
     } catch (error) {
       next(error);

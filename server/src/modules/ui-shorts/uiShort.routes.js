@@ -12,4 +12,9 @@ router.post('/', authenticate, authorize('creator', 'admin'), uploadShot, cloudi
 router.post('/:id/like', authenticate, uiShotController.toggleLike);
 router.post('/:id/save', authenticate, uiShotController.toggleSave);
 
+// Admin routes
+router.get('/admin/all', authenticate, authorize('admin'), uiShotController.adminGetAll);
+router.delete('/admin/:id', authenticate, authorize('admin'), uiShotController.adminDelete);
+router.patch('/admin/:id/toggle-published', authenticate, authorize('admin'), uiShotController.adminTogglePublished);
+
 export default router;

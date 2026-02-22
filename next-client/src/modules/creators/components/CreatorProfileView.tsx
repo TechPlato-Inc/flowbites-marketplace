@@ -1,10 +1,12 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { getUploadUrl } from '@/lib/api/client';
-import type { CreatorProfile, Template, UIShot, ServicePackage } from '@/types';
-import { Button, Badge } from '@/design-system';
+import { useState } from "react";
+import Link from "next/link";
+import { getUploadUrl } from "@/lib/api/client";
+import type { CreatorProfile, Template, UIShot, ServicePackage } from "@/types";
+import { Button, Badge } from "@/design-system";
+import { FollowButton } from "./FollowButton";
+import { ReportButton } from "@/modules/reports/components/ReportButton";
 import {
   ShoppingBag,
   Eye,
@@ -21,9 +23,10 @@ import {
   Layers,
   Palette,
   Grid3X3,
-} from 'lucide-react';
+  Flag,
+} from "lucide-react";
 
-type TabType = 'templates' | 'shots' | 'services';
+type TabType = "templates" | "shots" | "services";
 
 interface CreatorData {
   profile: CreatorProfile;
@@ -33,11 +36,10 @@ interface CreatorData {
 }
 
 export const CreatorProfileView = ({ data }: { data: CreatorData }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('templates');
+  const [activeTab, setActiveTab] = useState<TabType>("templates");
 
   const { profile, templates, shots, services } = data;
-  const user =
-    typeof profile.userId === 'string' ? null : profile.userId;
+  const user = typeof profile.userId === "string" ? null : profile.userId;
 
   const tabCounts = {
     templates: templates.length,
@@ -60,7 +62,7 @@ export const CreatorProfileView = ({ data }: { data: CreatorData }) => {
             <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5">
               {/* Avatar */}
               <div className="w-28 h-28 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center text-white text-4xl md:text-5xl font-display font-bold ring-4 ring-white shadow-lg">
-                {profile.displayName?.charAt(0).toUpperCase() || '?'}
+                {profile.displayName?.charAt(0).toUpperCase() || "?"}
               </div>
 
               {/* Name + meta */}
@@ -85,14 +87,28 @@ export const CreatorProfileView = ({ data }: { data: CreatorData }) => {
                   @{profile.username}
                   {user?.createdAt && (
                     <span className="ml-2 text-neutral-400">
-                      · Joined{' '}
-                      {new Date(user.createdAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        year: 'numeric',
+                      · Joined{" "}
+                      {new Date(user.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        year: "numeric",
                       })}
                     </span>
                   )}
                 </p>
+              </div>
+
+              {/* Follow Button */}
+              <div className="flex items-center gap-3">
+                <FollowButton
+                  creatorId={profile._id}
+                  showCount={true}
+                  size="md"
+                />
+                <ReportButton
+                  targetType="creator"
+                  targetId={profile._id}
+                  variant="icon"
+                />
               </div>
 
               {/* Social / Website links */}
@@ -188,25 +204,25 @@ export const CreatorProfileView = ({ data }: { data: CreatorData }) => {
       <div className="sticky top-0 z-20 bg-white border-b border-neutral-200">
         <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8">
           <div className="flex items-center gap-1">
-            {(['templates', 'shots', 'services'] as TabType[]).map((tab) => (
+            {(["templates", "shots", "services"] as TabType[]).map((tab) => (
               <Button
                 key={tab}
                 variant="ghost"
                 onClick={() => setActiveTab(tab)}
                 className={`!px-4 !py-3.5 !text-sm !font-medium !border-b-2 !transition-colors !capitalize !rounded-none ${
                   activeTab === tab
-                    ? '!border-primary-500 !text-primary-600'
-                    : '!border-transparent !text-neutral-500 hover:!text-neutral-700'
+                    ? "!border-primary-500 !text-primary-600"
+                    : "!border-transparent !text-neutral-500 hover:!text-neutral-700"
                 }`}
               >
                 {tab}
                 <Badge
                   size="sm"
-                  variant={activeTab === tab ? 'info' : 'neutral'}
+                  variant={activeTab === tab ? "info" : "neutral"}
                   className={`!ml-1.5 !text-xs ${
                     activeTab === tab
-                      ? '!bg-primary-50 !text-primary-600'
-                      : '!bg-neutral-100 !text-neutral-400'
+                      ? "!bg-primary-50 !text-primary-600"
+                      : "!bg-neutral-100 !text-neutral-400"
                   }`}
                 >
                   {tabCounts[tab]}
@@ -219,13 +235,9 @@ export const CreatorProfileView = ({ data }: { data: CreatorData }) => {
 
       {/* ===== TAB CONTENT ===== */}
       <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-8">
-        {activeTab === 'templates' && (
-          <TemplatesTab templates={templates} />
-        )}
-        {activeTab === 'shots' && <ShotsTab shots={shots} />}
-        {activeTab === 'services' && (
-          <ServicesTab services={services} />
-        )}
+        {activeTab === "templates" && <TemplatesTab templates={templates} />}
+        {activeTab === "shots" && <ShotsTab shots={shots} />}
+        {activeTab === "services" && <ServicesTab services={services} />}
       </div>
     </div>
   );
@@ -250,74 +262,113 @@ const StatItem = ({
 
 /* ===== TEMPLATES TAB ===== */
 const TemplatesTab = ({ templates }: { templates: Template[] }) => {
+  const [activeFilter, setActiveFilter] = useState<string>("all");
+
   if (templates.length === 0) {
     return (
       <EmptyState
-        icon={<Layers size={40} />}
+        icon={<Layers size={48} />}
         title="No templates yet"
         description="This creator hasn't published any templates."
       />
     );
   }
 
+  // Get unique platforms
+  const platforms = ["all", ...new Set(templates.map((t) => t.platform))];
+
+  // Filter templates
+  const filteredTemplates =
+    activeFilter === "all"
+      ? templates
+      : templates.filter((t) => t.platform === activeFilter);
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {templates.map((template) => (
-        <Link
-          key={template._id}
-          href={`/templates/${template.slug || template._id}`}
-          className="group bg-white rounded-xl border border-neutral-200 overflow-hidden hover:shadow-lg hover:border-neutral-300 transition-all duration-300"
-        >
-          {/* Thumbnail */}
-          <div className="relative aspect-[16/10] overflow-hidden bg-neutral-100">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={getUploadUrl(`images/${template.thumbnail}`)}
-              alt={template.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                <Badge variant="info" size="sm">
+    <div className="space-y-6">
+      {/* Filter Bar - Wix Studio Style */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-200">
+        <p className="text-sm text-neutral-500">
+          {filteredTemplates.length} template
+          {filteredTemplates.length !== 1 ? "s" : ""} found
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          {platforms.map((platform) => (
+            <button
+              key={platform}
+              onClick={() => setActiveFilter(platform)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                activeFilter === platform
+                  ? "bg-primary-500 text-white"
+                  : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+              }`}
+            >
+              {platform === "all"
+                ? "All"
+                : platform.charAt(0).toUpperCase() + platform.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Templates Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {filteredTemplates.map((template) => (
+          <Link
+            key={template._id}
+            href={`/templates/${template.slug || template._id}`}
+            className="group bg-white rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300"
+          >
+            {/* Thumbnail - Wix Studio Style */}
+            <div className="relative aspect-[4/3] overflow-hidden bg-neutral-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getUploadUrl(`images/${template.thumbnail}`)}
+                alt={template.title}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                loading="lazy"
+              />
+              {/* Platform Badge - bottom right */}
+              <div className="absolute bottom-3 right-3">
+                <span className="px-2 py-1 bg-black/70 text-white text-[10px] font-medium uppercase tracking-wider rounded">
                   {template.platform}
-                </Badge>
-                <span className="text-white text-xs flex items-center gap-1">
-                  <Eye size={12} /> Live Preview
+                </span>
+              </div>
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <span className="px-4 py-2 bg-white text-neutral-900 text-sm font-medium rounded-lg">
+                  View Template
                 </span>
               </div>
             </div>
-          </div>
 
-          {/* Info */}
-          <div className="p-4">
-            <h3 className="font-semibold text-neutral-900 text-sm mb-1 truncate group-hover:text-primary-600 transition-colors">
-              {template.title}
-            </h3>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-neutral-400 capitalize">
-                {typeof template.category === 'string'
-                  ? template.category
-                  : template.category?.name}
-              </span>
-              <span className="font-bold text-neutral-900 text-sm">
-                ${template.price}
-              </span>
+            {/* Info - Clean Wix Style */}
+            <div className="p-4">
+              <h3 className="font-semibold text-neutral-900 text-sm mb-1 truncate group-hover:text-primary-600 transition-colors">
+                {template.title}
+              </h3>
+              <p className="text-xs text-neutral-500 mb-3">
+                By{" "}
+                {typeof template.creatorId === "object"
+                  ? (template.creatorId as any)?.name || "Creator"
+                  : "Creator"}
+              </p>
+              <div className="flex items-center justify-between">
+                <Badge
+                  variant={template.price === 0 ? "success" : "neutral"}
+                  size="sm"
+                  className={
+                    template.price === 0
+                      ? "!bg-green-100 !text-green-700"
+                      : "!bg-neutral-100 !text-neutral-600"
+                  }
+                >
+                  {template.price === 0 ? "Free" : `$${template.price}`}
+                </Badge>
+              </div>
             </div>
-            <div className="flex items-center gap-3 mt-2 pt-2 border-t border-neutral-100">
-              <span className="flex items-center gap-1 text-xs text-neutral-400">
-                <ShoppingBag size={11} /> {template.stats.purchases}
-              </span>
-              <span className="flex items-center gap-1 text-xs text-neutral-400">
-                <Eye size={11} /> {template.stats.views}
-              </span>
-              <span className="flex items-center gap-1 text-xs text-neutral-400">
-                <Heart size={11} /> {template.stats.likes}
-              </span>
-            </div>
-          </div>
-        </Link>
-      ))}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 };
@@ -327,7 +378,7 @@ const ShotsTab = ({ shots }: { shots: UIShot[] }) => {
   if (shots.length === 0) {
     return (
       <EmptyState
-        icon={<Grid3X3 size={40} />}
+        icon={<Grid3X3 size={48} />}
         title="No shots yet"
         description="This creator hasn't uploaded any UI shots."
       />
@@ -337,11 +388,7 @@ const ShotsTab = ({ shots }: { shots: UIShot[] }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {shots.map((shot) => (
-        <Link
-          key={shot._id}
-          href="/ui-shorts"
-          className="group"
-        >
+        <Link key={shot._id} href="/ui-shorts" className="group">
           <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-neutral-100 ring-1 ring-black/5 transition-all duration-300 group-hover:ring-black/10 group-hover:shadow-xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -360,7 +407,10 @@ const ShotsTab = ({ shots }: { shots: UIShot[] }) => {
           </div>
           <div className="flex items-center gap-3 mt-2 px-0.5">
             <span className="flex items-center gap-1 text-xs text-neutral-400">
-              <Heart size={11} className={shot.stats.likes > 0 ? 'text-red-400' : ''} />
+              <Heart
+                size={11}
+                className={shot.stats.likes > 0 ? "text-red-400" : ""}
+              />
               {shot.stats.likes}
             </span>
             <span className="flex items-center gap-1 text-xs text-neutral-400">
@@ -381,7 +431,7 @@ const ServicesTab = ({ services }: { services: ServicePackage[] }) => {
   if (services.length === 0) {
     return (
       <EmptyState
-        icon={<Package size={40} />}
+        icon={<Package size={48} />}
         title="No services offered"
         description="This creator hasn't listed any services yet."
       />
@@ -429,7 +479,10 @@ const ServicesTab = ({ services }: { services: ServicePackage[] }) => {
             {/* Features */}
             <div className="space-y-1.5 mb-4">
               {pkg.features.slice(0, 4).map((f, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm text-neutral-600">
+                <div
+                  key={i}
+                  className="flex items-center gap-2 text-sm text-neutral-600"
+                >
                   <CheckCircle size={13} className="text-green-500 shrink-0" />
                   {f}
                 </div>
@@ -442,11 +495,13 @@ const ServicesTab = ({ services }: { services: ServicePackage[] }) => {
             </div>
 
             {/* Linked template */}
-            {pkg.templateId && typeof pkg.templateId !== 'string' && (
+            {pkg.templateId && typeof pkg.templateId !== "string" && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-neutral-50 border border-neutral-100">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={getUploadUrl(`images/${(pkg.templateId as Template).thumbnail}`)}
+                  src={getUploadUrl(
+                    `images/${(pkg.templateId as Template).thumbnail}`,
+                  )}
                   alt=""
                   className="w-12 h-9 rounded object-cover"
                 />

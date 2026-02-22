@@ -16,6 +16,14 @@ router.post('/onboarding/creator-reference', authenticate, authorize('creator', 
 router.post('/onboarding/submit', authenticate, authorize('creator', 'admin'), creatorController.submitOnboarding);
 router.get('/onboarding/search', authenticate, authorize('creator', 'admin'), creatorController.searchCreators);
 
+// Stripe Connect
+router.post('/connect/onboard', authenticate, authorize('creator', 'admin'), creatorController.connectStripe);
+router.get('/connect/status', authenticate, authorize('creator', 'admin'), creatorController.getConnectStatus);
+router.get('/connect/dashboard', authenticate, authorize('creator', 'admin'), creatorController.getStripeDashboard);
+
+// Public: list all verified creators
+router.get('/', creatorController.getAll);
+
 // Public: get creator profile with templates, shots, services
 router.get('/:identifier', creatorController.getPublicProfile);
 

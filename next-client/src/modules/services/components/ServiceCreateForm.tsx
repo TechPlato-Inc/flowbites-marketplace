@@ -1,59 +1,53 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { api } from '@/lib/api/client';
-import type { Template } from '@/types';
-import { Button, Input } from '@/design-system';
-import { Plus, X } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { api } from "@/lib/api/client";
+import type { Template } from "@/types";
+import { Button, Input } from "@/design-system";
+import { Plus, X } from "lucide-react";
 
-const serviceSchema = z.object({
-  templateId: z.string().min(1, 'Template is required'),
-  name: z.string().min(1, 'Name is required').max(200),
-  description: z.string().min(1, 'Description is required').max(5000),
-  category: z.enum([
-    'webflow-development',
-    'framer-development',
-    'wix-development',
-    'custom-design',
-    'migration',
-    'other',
-  ]),
-  price: z.coerce.number().min(1, 'Price must be at least $1'),
-  deliveryDays: z.coerce.number().min(1, 'Delivery must be at least 1 day'),
-  revisions: z.coerce.number().min(0),
-  requirements: z.string().optional(),
-});
-
-type ServiceForm = z.infer<typeof serviceSchema>;
+type ServiceForm = {
+  templateId: string;
+  name: string;
+  description: string;
+  category:
+    | "webflow-development"
+    | "framer-development"
+    | "wix-development"
+    | "custom-design"
+    | "migration"
+    | "other";
+  price: number;
+  deliveryDays: number;
+  revisions: number;
+  requirements?: string;
+};
 
 const categoryLabels: Record<string, string> = {
-  'webflow-development': 'Webflow Development',
-  'framer-development': 'Framer Development',
-  'wix-development': 'Wix Development',
-  'custom-design': 'Custom Design',
-  'migration': 'Migration',
-  'other': 'Other',
+  "webflow-development": "Webflow Development",
+  "framer-development": "Framer Development",
+  "wix-development": "Wix Development",
+  "custom-design": "Custom Design",
+  migration: "Migration",
+  other: "Other",
 };
 
 export function ServiceCreateForm() {
   const router = useRouter();
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [features, setFeatures] = useState<string[]>(['']);
+  const [features, setFeatures] = useState<string[]>([""]);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<ServiceForm>({
-    resolver: zodResolver(serviceSchema),
     defaultValues: {
-      category: 'custom-design',
+      category: "custom-design",
       revisions: 2,
       deliveryDays: 7,
     },
@@ -62,8 +56,10 @@ export function ServiceCreateForm() {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const { data } = await api.get('/templates/my-templates');
-        const approved = data.data.templates.filter((t: Template) => t.status === 'approved');
+        const { data } = await api.get("/templates/my-templates");
+        const approved = data.data.templates.filter(
+          (t: Template) => t.status === "approved",
+        );
         setTemplates(approved);
       } catch {
         // Silent — templates just won't load
@@ -72,28 +68,31 @@ export function ServiceCreateForm() {
     fetchTemplates();
   }, []);
 
-  const addFeature = () => setFeatures(prev => [...prev, '']);
-  const removeFeature = (index: number) => setFeatures(prev => prev.filter((_, i) => i !== index));
+  const addFeature = () => setFeatures((prev) => [...prev, ""]);
+  const removeFeature = (index: number) =>
+    setFeatures((prev) => prev.filter((_, i) => i !== index));
   const updateFeature = (index: number, value: string) => {
-    setFeatures(prev => prev.map((f, i) => (i === index ? value : f)));
+    setFeatures((prev) => prev.map((f, i) => (i === index ? value : f)));
   };
 
   const onSubmit = async (values: ServiceForm) => {
     setSubmitting(true);
-    setError('');
+    setError("");
 
     try {
-      const filteredFeatures = features.filter(f => f.trim() !== '');
-      await api.post('/services/packages', {
+      const filteredFeatures = features.filter((f) => f.trim() !== "");
+      await api.post("/services/packages", {
         ...values,
         features: filteredFeatures,
       });
-      router.push('/dashboard/creator');
+      router.push("/dashboard/creator");
     } catch (err: unknown) {
-      const msg = (err && typeof err === 'object' && 'response' in err)
-        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        : undefined;
-      setError(msg || 'Failed to create service');
+      const msg =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data
+              ?.error
+          : undefined;
+      setError(msg || "Failed to create service");
     } finally {
       setSubmitting(false);
     }
@@ -113,8 +112,12 @@ export function ServiceCreateForm() {
 
       {templates.length === 0 ? (
         <div className="bg-white border border-neutral-200 rounded-lg p-12 text-center">
-          <p className="text-neutral-600 mb-2">You need at least one approved template to create a service.</p>
-          <p className="text-sm text-neutral-500">Upload and get a template approved first.</p>
+          <p className="text-neutral-600 mb-2">
+            You need at least one approved template to create a service.
+          </p>
+          <p className="text-sm text-neutral-500">
+            Upload and get a template approved first.
+          </p>
         </div>
       ) : (
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
@@ -126,8 +129,8 @@ export function ServiceCreateForm() {
             <select
               className={`w-full h-11 rounded-lg border bg-white text-neutral-900 px-4
                 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:outline-none
-                ${errors.templateId ? 'border-error' : 'border-neutral-300'}`}
-              {...register('templateId')}
+                ${errors.templateId ? "border-error" : "border-neutral-300"}`}
+              {...register("templateId")}
             >
               <option value="">Select a template...</option>
               {templates.map((t) => (
@@ -137,7 +140,9 @@ export function ServiceCreateForm() {
               ))}
             </select>
             {errors.templateId && (
-              <p className="text-sm text-error mt-1">{errors.templateId.message}</p>
+              <p className="text-sm text-error mt-1">
+                {errors.templateId.message}
+              </p>
             )}
           </div>
 
@@ -146,35 +151,43 @@ export function ServiceCreateForm() {
             label="Service Name"
             placeholder="e.g. Full Webflow Development & Customization"
             error={errors.name?.message}
-            {...register('name')}
+            {...register("name")}
           />
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Description</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+              Description
+            </label>
             <textarea
               rows={4}
               className={`w-full rounded-lg border bg-white text-neutral-900 px-4 py-3
                 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:outline-none
-                transition-colors duration-200 ${errors.description ? 'border-error' : 'border-neutral-300'}`}
+                transition-colors duration-200 ${errors.description ? "border-error" : "border-neutral-300"}`}
               placeholder="Describe what you'll deliver..."
-              {...register('description')}
+              {...register("description")}
             />
             {errors.description && (
-              <p className="text-sm text-error mt-1">{errors.description.message}</p>
+              <p className="text-sm text-error mt-1">
+                {errors.description.message}
+              </p>
             )}
           </div>
 
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Category</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+              Category
+            </label>
             <select
               className="w-full h-11 rounded-lg border border-neutral-300 bg-white text-neutral-900 px-4
                 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:outline-none"
-              {...register('category')}
+              {...register("category")}
             >
               {Object.entries(categoryLabels).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
+                <option key={value} value={value}>
+                  {label}
+                </option>
               ))}
             </select>
           </div>
@@ -187,7 +200,7 @@ export function ServiceCreateForm() {
               min="1"
               placeholder="199"
               error={errors.price?.message}
-              {...register('price')}
+              {...register("price")}
             />
             <Input
               label="Delivery (days)"
@@ -195,7 +208,7 @@ export function ServiceCreateForm() {
               min="1"
               placeholder="7"
               error={errors.deliveryDays?.message}
-              {...register('deliveryDays')}
+              {...register("deliveryDays")}
             />
             <Input
               label="Revisions (0=unlimited)"
@@ -203,13 +216,15 @@ export function ServiceCreateForm() {
               min="0"
               placeholder="2"
               error={errors.revisions?.message}
-              {...register('revisions')}
+              {...register("revisions")}
             />
           </div>
 
           {/* Features */}
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Features</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+              Features
+            </label>
             <div className="space-y-2">
               {features.map((feature, index) => (
                 <div key={index} className="flex gap-2">
@@ -252,14 +267,14 @@ export function ServiceCreateForm() {
                 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:outline-none
                 transition-colors duration-200"
               placeholder="What do you need from the buyer to start? (e.g. brand assets, content, Figma access)"
-              {...register('requirements')}
+              {...register("requirements")}
             />
           </div>
 
           {/* Actions */}
           <div className="pt-4">
             <Button type="submit" disabled={submitting}>
-              {submitting ? 'Creating...' : 'Create Service Package'}
+              {submitting ? "Creating..." : "Create Service Package"}
             </Button>
           </div>
         </form>

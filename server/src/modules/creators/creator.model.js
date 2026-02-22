@@ -106,6 +106,11 @@ const creatorProfileSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isOfficial: {
+    type: Boolean,
+    default: false,
+    description: 'True for official Flowbites marketplace account (admin@flowbites.com)'
+  },
 
   // Subscription
   subscription: {

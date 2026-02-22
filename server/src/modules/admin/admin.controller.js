@@ -163,6 +163,15 @@ export class AdminController {
     }
   }
 
+  async getDashboardStats(req, res, next) {
+    try {
+      const stats = await adminService.getDashboardStats();
+      res.json({ success: true, data: stats });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async reorderCategories(req, res, next) {
     try {
       const result = await adminService.reorderCategories(req.body.categories);

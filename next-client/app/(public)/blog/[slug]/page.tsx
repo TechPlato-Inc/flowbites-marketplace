@@ -1,22 +1,21 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { Calendar, Clock, ChevronLeft, Tag, User, ArrowRight } from 'lucide-react';
-import { generateSEO, blogArticleSchema } from '@/lib/utils/seo';
-import { JsonLd } from '@/components/seo/JsonLd';
-import { blogPosts } from '@/modules/blog/data/blogPosts';
-import { sanitizeHtml } from '@/lib/utils/sanitize';
-
-/* ------------------------------------------------------------------ */
-/*  Static Generation + ISR                                            */
-/* ------------------------------------------------------------------ */
-export const dynamicParams = false; // 404 for unknown slugs
-
-export function generateStaticParams() {
-  return blogPosts.map((post) => ({
-    slug: post.slug,
-  }));
-}
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import {
+  Calendar,
+  Clock,
+  ChevronLeft,
+  Tag,
+  User,
+  ArrowRight,
+} from "lucide-react";
+import { generateSEO, blogArticleSchema } from "@/lib/utils/seo";
+import { JsonLd } from "@/components/seo/JsonLd";
+import {
+  getBlogBySlug,
+  getBlogPosts,
+} from "@/modules/blog/services/blog.service.server";
+import { sanitizeHtml } from "@/lib/utils/sanitize";
 
 /* ------------------------------------------------------------------ */
 /*  Metadata                                                           */
@@ -25,20 +24,22 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const post = blogPosts.find((p) => p.slug === slug);
 
-  if (!post) {
-    return generateSEO({ title: 'Article Not Found' });
+  try {
+    const post = await getBlogBySlug(slug);
+    return generateSEO({
+      title: post.title,
+      description: post.excerpt,
+      canonical: `/blog/${post.slug}`,
+      ogType: "article",
+    });
+  } catch {
+    return generateSEO({ title: "Article Not Found" });
   }
-
-  return generateSEO({
-    title: post.title,
-    description: post.excerpt,
-    canonical: `/blog/${post.slug}`,
-    ogType: 'article',
-  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -46,16 +47,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 /* ------------------------------------------------------------------ */
 export default async function BlogPostPage({ params }: PageProps) {
   const { slug } = await params;
-  const post = blogPosts.find((p) => p.slug === slug);
 
-  if (!post) {
+  let post;
+  try {
+    post = await getBlogBySlug(slug);
+  } catch {
     notFound();
   }
 
+  const authorName = post.authorName || post.author?.name || "Flowbites Team";
+  const authorRole = post.authorRole || "Contributor";
+  const publishedDate = post.publishedAt || post.createdAt;
+
   // Related posts from same category
-  const relatedPosts = blogPosts
-    .filter((p) => p.category === post.category && p.id !== post.id)
-    .slice(0, 3);
+  let relatedPosts: (typeof post)[] = [];
+  try {
+    const data = await getBlogPosts({ category: post.category, limit: "4" });
+    relatedPosts = data.posts.filter((p) => p._id !== post._id).slice(0, 3);
+  } catch {
+    // Non-critical — skip related posts
+  }
 
   return (
     <div className="min-h-screen">
@@ -65,8 +76,8 @@ export default async function BlogPostPage({ params }: PageProps) {
           title: post.title,
           slug: post.slug,
           excerpt: post.excerpt,
-          authorName: post.author,
-          publishedAt: post.publishedAt,
+          authorName,
+          publishedAt: publishedDate,
           tags: post.tags,
         })}
       />
@@ -84,26 +95,28 @@ export default async function BlogPostPage({ params }: PageProps) {
           <span className="inline-block text-xs font-medium bg-primary-500 text-white px-3 py-1 rounded-full mb-4">
             {post.category}
           </span>
-          <h1 className="text-3xl md:text-4xl font-bold mb-6 leading-tight">{post.title}</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-6 leading-tight">
+            {post.title}
+          </h1>
           <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-400">
             <span className="flex items-center gap-1.5">
               <User className="w-4 h-4" />
-              {post.author}
+              {authorName}
             </span>
             <span className="text-neutral-600">&middot;</span>
-            <span>{post.authorRole}</span>
+            <span>{authorRole}</span>
             <span className="text-neutral-600">&middot;</span>
             <span className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4" />
-              {new Date(post.publishedAt).toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric',
+              {new Date(publishedDate).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
               })}
             </span>
             <span className="flex items-center gap-1.5">
               <Clock className="w-4 h-4" />
-              {post.readTime}
+              {post.readTime || "5 min read"}
             </span>
           </div>
         </div>
@@ -142,17 +155,19 @@ export default async function BlogPostPage({ params }: PageProps) {
         {/* Author Box */}
         <div className="mt-8 p-6 bg-neutral-50 rounded-xl flex items-start gap-4">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold shrink-0">
-            {post.author
-              .split(' ')
+            {authorName
+              .split(" ")
               .map((n) => n[0])
-              .join('')}
+              .join("")}
           </div>
           <div>
-            <h3 className="font-semibold text-neutral-900">{post.author}</h3>
-            <p className="text-sm text-neutral-500">{post.authorRole} at Flowbites</p>
+            <h3 className="font-semibold text-neutral-900">{authorName}</h3>
+            <p className="text-sm text-neutral-500">
+              {authorRole} at Flowbites
+            </p>
             <p className="text-sm text-neutral-500 mt-2">
-              Passionate about web design, no-code tools, and empowering creators to build beautiful
-              websites.
+              Passionate about web design, no-code tools, and empowering
+              creators to build beautiful websites.
             </p>
           </div>
         </div>
@@ -161,7 +176,8 @@ export default async function BlogPostPage({ params }: PageProps) {
         <div className="mt-10 p-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl text-white text-center">
           <h3 className="text-xl font-bold mb-2">Find the Perfect Template</h3>
           <p className="text-primary-100 mb-6">
-            Browse thousands of premium Webflow, Framer, and Wix templates on Flowbites Marketplace.
+            Browse thousands of premium Webflow, Framer, and Wix templates on
+            Flowbites Marketplace.
           </p>
           <Link
             href="/templates"
@@ -177,11 +193,13 @@ export default async function BlogPostPage({ params }: PageProps) {
       {relatedPosts.length > 0 && (
         <div className="bg-neutral-50 py-12">
           <div className="max-w-6xl mx-auto px-4">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-8">Related Articles</h2>
+            <h2 className="text-2xl font-bold text-neutral-900 mb-8">
+              Related Articles
+            </h2>
             <div className="grid md:grid-cols-3 gap-6">
               {relatedPosts.map((rp) => (
                 <Link
-                  key={rp.id}
+                  key={rp._id}
                   href={`/blog/${rp.slug}`}
                   className="group block bg-white border border-neutral-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-200"
                 >
@@ -193,11 +211,15 @@ export default async function BlogPostPage({ params }: PageProps) {
                     />
                   </div>
                   <div className="p-5">
-                    <span className="text-xs font-medium text-primary-500">{rp.category}</span>
+                    <span className="text-xs font-medium text-primary-500">
+                      {rp.category}
+                    </span>
                     <h3 className="font-semibold text-neutral-900 mt-1 mb-2 line-clamp-2 group-hover:text-primary-500 transition-colors">
                       {rp.title}
                     </h3>
-                    <p className="text-sm text-neutral-500 line-clamp-2">{rp.excerpt}</p>
+                    <p className="text-sm text-neutral-500 line-clamp-2">
+                      {rp.excerpt}
+                    </p>
                   </div>
                 </Link>
               ))}

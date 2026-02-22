@@ -5,6 +5,7 @@ import { createTemplateSchema, updateTemplateSchema } from './template.validator
 import { authenticate, authorize } from '../../middleware/auth.js';
 import { uploadTemplate } from '../../middleware/upload.js';
 import { cloudinaryUpload } from '../../middleware/cloudinaryUpload.js';
+import { cacheResponse } from '../../middleware/cache.js';
 
 const router = express.Router();
 const templateController = new TemplateController();
@@ -17,9 +18,9 @@ router.get(
   templateController.getMyTemplates
 );
 
-// Public routes
-router.get('/', templateController.getAll);
-router.get('/:id', templateController.getById);
+// Public routes (cached for 60s for listing, 30s for detail)
+router.get('/', cacheResponse(60), templateController.getAll);
+router.get('/:id', cacheResponse(30), templateController.getById);
 
 // Creator routes
 router.post(

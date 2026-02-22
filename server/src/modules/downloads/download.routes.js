@@ -6,7 +6,7 @@ const router = express.Router();
 const downloadController = new DownloadController();
 
 router.post('/token', authenticate, downloadController.generateToken);
-router.get('/:token', downloadController.download);
 router.get('/licenses/my-licenses', authenticate, downloadController.getMyLicenses);
+router.get('/:token', downloadController.download);
 
 export default router;

@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import Link from 'next/link';
-import { Search, Calendar, Clock, ArrowRight } from 'lucide-react';
-import type { BlogPost } from '@/modules/blog/data/blogPosts';
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import { Search, Calendar, Clock, ArrowRight } from "lucide-react";
+import type { BlogPost } from "@/modules/blog/services/blog.service";
 
 const CATEGORIES = [
-  'All',
-  'Web Design',
-  'Webflow',
-  'Framer',
-  'Wix',
-  'No-Code',
-  'Business',
-  'Tutorials',
-  'Trends',
-  'SEO',
-  'Freelancing',
+  "All",
+  "Web Design",
+  "Webflow",
+  "Framer",
+  "Wix",
+  "No-Code",
+  "Business",
+  "Tutorials",
+  "Trends",
+  "SEO",
+  "Freelancing",
 ];
 
 const POSTS_PER_PAGE = 12;
@@ -27,14 +27,14 @@ interface BlogListClientProps {
 }
 
 export function BlogListClient({ posts, featuredPost }: BlogListClientProps) {
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
 
   const filteredPosts = useMemo(() => {
     let filtered = [...posts];
 
-    if (activeCategory !== 'All') {
+    if (activeCategory !== "All") {
       filtered = filtered.filter((p) => p.category === activeCategory);
     }
 
@@ -44,7 +44,7 @@ export function BlogListClient({ posts, featuredPost }: BlogListClientProps) {
         (p) =>
           p.title.toLowerCase().includes(q) ||
           p.excerpt.toLowerCase().includes(q) ||
-          p.tags.some((t) => t.toLowerCase().includes(q))
+          p.tags.some((t) => t.toLowerCase().includes(q)),
       );
     }
 
@@ -56,7 +56,7 @@ export function BlogListClient({ posts, featuredPost }: BlogListClientProps) {
   return (
     <>
       {/* Featured Post */}
-      {featuredPost && activeCategory === 'All' && !searchQuery && (
+      {featuredPost && activeCategory === "All" && !searchQuery && (
         <div className="max-w-6xl mx-auto px-4 -mt-8">
           <Link
             href={`/blog/${featuredPost.slug}`}
@@ -76,17 +76,28 @@ export function BlogListClient({ posts, featuredPost }: BlogListClientProps) {
                 </div>
               </div>
               <div className="p-8 md:p-12 flex flex-col justify-center">
-                <span className="text-xs font-medium text-primary-500 mb-2">{featuredPost.category}</span>
-                <h2 className="text-2xl font-bold text-neutral-900 mb-3">{featuredPost.title}</h2>
-                <p className="text-neutral-500 mb-4 line-clamp-3">{featuredPost.excerpt}</p>
+                <span className="text-xs font-medium text-primary-500 mb-2">
+                  {featuredPost.category}
+                </span>
+                <h2 className="text-2xl font-bold text-neutral-900 mb-3">
+                  {featuredPost.title}
+                </h2>
+                <p className="text-neutral-500 mb-4 line-clamp-3">
+                  {featuredPost.excerpt}
+                </p>
                 <div className="flex items-center gap-4 text-sm text-neutral-400">
-                  <span>{featuredPost.author}</span>
-                  <span className="flex items-center gap-1">
+                  <span>{featuredPost.authorName}</span>
+                  <span
+                    className="flex items-center gap-1"
+                    suppressHydrationWarning
+                  >
                     <Calendar className="w-3 h-3" />
-                    {new Date(featuredPost.publishedAt).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
+                    {new Date(
+                      featuredPost.publishedAt || featuredPost.createdAt,
+                    ).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
                     })}
                   </span>
                   <span className="flex items-center gap-1">
@@ -114,8 +125,8 @@ export function BlogListClient({ posts, featuredPost }: BlogListClientProps) {
                 }}
                 className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
                   activeCategory === cat
-                    ? 'bg-neutral-900 text-white'
-                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                    ? "bg-neutral-900 text-white"
+                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
                 }`}
               >
                 {cat}
@@ -141,15 +152,15 @@ export function BlogListClient({ posts, featuredPost }: BlogListClientProps) {
 
         {/* Results Count */}
         <p className="text-sm text-neutral-500 mb-6">
-          {filteredPosts.length} article{filteredPosts.length !== 1 ? 's' : ''}
-          {activeCategory !== 'All' && ` in ${activeCategory}`}
+          {filteredPosts.length} article{filteredPosts.length !== 1 ? "s" : ""}
+          {activeCategory !== "All" && ` in ${activeCategory}`}
         </p>
 
         {/* Posts Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {paginatedPosts.map((post) => (
             <Link
-              key={post.id}
+              key={post._id}
               href={`/blog/${post.slug}`}
               className="group block border border-neutral-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-200"
             >
@@ -170,15 +181,22 @@ export function BlogListClient({ posts, featuredPost }: BlogListClientProps) {
                 <h3 className="font-semibold text-neutral-900 mb-2 line-clamp-2 group-hover:text-primary-500 transition-colors">
                   {post.title}
                 </h3>
-                <p className="text-sm text-neutral-500 mb-4 line-clamp-2">{post.excerpt}</p>
+                <p className="text-sm text-neutral-500 mb-4 line-clamp-2">
+                  {post.excerpt}
+                </p>
                 <div className="flex items-center justify-between text-xs text-neutral-400">
-                  <span>{post.author}</span>
+                  <span>{post.authorName}</span>
                   <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1">
+                    <span
+                      className="flex items-center gap-1"
+                      suppressHydrationWarning
+                    >
                       <Calendar className="w-3 h-3" />
-                      {new Date(post.publishedAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
+                      {new Date(
+                        post.publishedAt || post.createdAt,
+                      ).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
                       })}
                     </span>
                     <span className="flex items-center gap-1">
@@ -212,9 +230,12 @@ export function BlogListClient({ posts, featuredPost }: BlogListClientProps) {
         {filteredPosts.length === 0 && (
           <div className="text-center py-16">
             <Search className="w-10 h-10 text-neutral-300 mx-auto mb-4" />
-            <h3 className="font-semibold text-neutral-900 mb-2">No articles found</h3>
+            <h3 className="font-semibold text-neutral-900 mb-2">
+              No articles found
+            </h3>
             <p className="text-sm text-neutral-500">
-              Try adjusting your search or filter to find what you are looking for.
+              Try adjusting your search or filter to find what you are looking
+              for.
             </p>
           </div>
         )}

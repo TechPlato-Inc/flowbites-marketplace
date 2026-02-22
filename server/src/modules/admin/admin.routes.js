@@ -7,6 +7,9 @@ const adminController = new AdminController();
 
 router.use(authenticate, authorize('admin'));
 
+// Dashboard overview stats
+router.get('/dashboard-stats', adminController.getDashboardStats);
+
 // Static routes first (before :id param routes)
 router.get('/templates/pending', adminController.getPendingTemplates);
 router.get('/templates/stats', adminController.getStats);

@@ -1,7 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:dribbble.com)"
+      "WebFetch(domain:dribbble.com)",
+      "Bash(cat:*)",
+      "Bash(git -C /Users/techplatoinc/Desktop/flowbites-marketplace-main log --oneline --all -20)",
+      "Read(//Users/techplatoinc/Desktop/flowbites-marketplace-main/**)",
+      "Bash(npx next dev:*)",
+      "Read(//private/tmp/**)",
+      "Bash(__NEW_LINE_04cf189cff124600__ echo \"\")",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npx --no-install eslint:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx prettier:*)"
+    ],
+    "additionalDirectories": [
+      "/tmp"
     ]
   }
 }

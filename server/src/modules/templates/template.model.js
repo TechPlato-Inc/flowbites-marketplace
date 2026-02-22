@@ -55,6 +55,11 @@ const templateSchema = new mongoose.Schema({
     required: [true, 'Price is required'],
     min: [0, 'Price cannot be negative']
   },
+  salePrice: {
+    type: Number,
+    min: [0, 'Sale price cannot be negative'],
+    default: null // null means no sale, otherwise shows discounted price
+  },
   currency: {
     type: String,
     default: 'USD'
@@ -125,7 +130,9 @@ const templateSchema = new mongoose.Schema({
     purchases: { type: Number, default: 0 },
     revenue: { type: Number, default: 0 },
     likes: { type: Number, default: 0 },
-    downloads: { type: Number, default: 0 }
+    downloads: { type: Number, default: 0 },
+    averageRating: { type: Number, default: 0 },
+    totalReviews: { type: Number, default: 0 }
   },
 
   // SEO
@@ -137,7 +144,19 @@ const templateSchema = new mongoose.Schema({
   version: {
     type: String,
     default: '1.0.0'
-  }
+  },
+
+  // Edit history/changelog
+  changeLog: [{
+    editedAt: { type: Date, default: Date.now },
+    editedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    changes: [{
+      field: String,
+      oldValue: mongoose.Schema.Types.Mixed,
+      newValue: mongoose.Schema.Types.Mixed
+    }],
+    reason: String
+  }]
 }, {
   timestamps: true
 });
@@ -148,6 +167,10 @@ templateSchema.index({ status: 1, madeByFlowbites: 1, createdAt: -1 });
 templateSchema.index({ category: 1, status: 1 });
 templateSchema.index({ status: 1, 'stats.purchases': -1 });
 templateSchema.index({ platform: 1, status: 1 });
+templateSchema.index({ status: 1, createdAt: -1 });
+templateSchema.index({ status: 1, price: 1 });
+templateSchema.index({ creatorId: 1, status: 1, createdAt: -1 });
+templateSchema.index({ status: 1, isFeatured: 1, createdAt: -1 });
 templateSchema.index({ title: 'text', description: 'text' });
 
 // Generate slug before saving

@@ -1,5 +1,6 @@
 import { UIShot, ShotLike, ShotSave } from './uiShort.model.js';
 import { AppError } from '../../middleware/errorHandler.js';
+import { AuditLog } from '../audit/auditLog.model.js';
 
 export class UIShotService {
   async create(creatorId, data, imageFile) {
@@ -80,5 +81,64 @@ export class UIShotService {
       await UIShot.findByIdAndUpdate(shotId, { $inc: { 'stats.saves': 1 } });
       return { saved: true };
     }
+  }
+
+  /**
+   * Admin: get all shots including unpublished.
+   */
+  async adminGetAll({ page = 1, limit = 20, creatorId } = {}) {
+    const skip = (page - 1) * limit;
+    const query = {};
+    if (creatorId) query.creatorId = creatorId;
+
+    const [shots, total] = await Promise.all([
+      UIShot.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('creatorId', 'name email avatar')
+        .lean(),
+      UIShot.countDocuments(query),
+    ]);
+
+    return {
+      shots,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    };
+  }
+
+  /**
+   * Admin: delete a shot.
+   */
+  async adminDelete(shotId, adminId, reason) {
+    const shot = await UIShot.findById(shotId);
+    if (!shot) throw new AppError('Shot not found', 404);
+
+    await UIShot.findByIdAndDelete(shotId);
+    await ShotLike.deleteMany({ shotId });
+    await ShotSave.deleteMany({ shotId });
+
+    AuditLog.create({
+      adminId,
+      action: 'content_removed',
+      targetType: 'shot',
+      targetId: shotId,
+      details: { title: shot.title, reason, creatorId: shot.creatorId },
+    }).catch(() => {});
+
+    return { deleted: true };
+  }
+
+  /**
+   * Admin: toggle published status.
+   */
+  async adminTogglePublished(shotId, adminId) {
+    const shot = await UIShot.findById(shotId);
+    if (!shot) throw new AppError('Shot not found', 404);
+
+    shot.isPublished = !shot.isPublished;
+    await shot.save();
+
+    return shot;
   }
 }

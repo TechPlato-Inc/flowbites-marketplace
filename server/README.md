@@ -1,219 +1,416 @@
-# Flowbites Marketplace - Backend API
+# Flowbites Marketplace Backend
 
-Node.js + Express + MongoDB backend for the Flowbites template marketplace.
+Express + MongoDB API for the Flowbites marketplace.
 
-## Architecture
+This backend powers:
+- template and service commerce
+- real Stripe Checkout + webhook processing
+- creator onboarding and earnings
+- withdrawals, tickets, reports, notifications
+- blog/content, reviews, coupons, follows, wishlists
+- admin moderation, audit logs, and user management
 
-**Modular feature-based structure:**
-- Each module has: `model.js`, `service.js`, `controller.js`, `routes.js`, `validator.js`
-- Clean separation of concerns
-- Easy to test and maintain
+## Tech Stack
+- Runtime: Node.js (ES modules), Express
+- Database: MongoDB + Mongoose
+- Auth: JWT access/refresh, role-based access control
+- Payments: Stripe Checkout + webhooks
+- Storage: Cloudinary (fallback local uploads)
+- Email: Resend (fallback console logging)
+- Validation/Security: Zod, Helmet, CORS, rate limiting, NoSQL sanitize
 
-## File Structure
-
-```
+## Directory Structure
+```text
 server/
-├── src/
-│   ├── config/
-│   │   └── db.js                    # MongoDB connection
-│   ├── middleware/
-│   │   ├── auth.js                  # JWT authentication & RBAC
-│   │   ├── errorHandler.js          # Global error handling
-│   │   ├── upload.js                # File upload (multer)
-│   │   └── validate.js              # Request validation (zod)
-│   ├── modules/
-│   │   ├── auth/                    # Authentication (register, login, refresh)
-│   │   ├── users/                   # User management
-│   │   ├── creators/                # Creator profiles
-│   │   ├── templates/               # Template CRUD + search
-│   │   ├── categories/              # Categories & tags
-│   │   ├── orders/                  # Order creation + mock checkout
-│   │   ├── downloads/               # License + secure downloads
-│   │   ├── services/                # Service packages & orders
-│   │   ├── ui-shorts/               # UI Shots feed
-│   │   ├── admin/                   # Template moderation
-│   │   └── analytics/               # Event tracking
-│   ├── scripts/
-│   │   └── seed.js                  # Database seeding
-│   └── index.js                     # Server entry point
-├── uploads/                         # File storage (templates, images, shots)
-├── .env.example                     # Environment variables template
-└── package.json
+├── README.md
+├── package.json
+├── .env.example
+├── tests/
+│   ├── setup.js
+│   └── integration.test.js
+├── uploads/
+│   ├── images/
+│   ├── shots/
+│   └── templates/
+└── src/
+    ├── index.js
+    ├── config/
+    │   ├── cloudinary.js
+    │   ├── db.js
+    │   ├── stripe.js
+    │   └── validateEnv.js
+    ├── jobs/
+    │   └── cleanup.js
+    ├── lib/
+    │   └── utils.js
+    ├── middleware/
+    │   ├── auth.js
+    │   ├── cache.js
+    │   ├── cloudinaryUpload.js
+    │   ├── errorHandler.js
+    │   ├── sanitize.js
+    │   ├── upload.js
+    │   ├── userRateLimit.js
+    │   └── validate.js
+    ├── modules/
+    │   ├── admin/
+    │   ├── analytics/
+    │   ├── audit/
+    │   ├── auth/
+    │   ├── blog/
+    │   ├── categories/
+    │   ├── checkout/
+    │   ├── coupons/
+    │   ├── creators/
+    │   ├── downloads/
+    │   ├── followers/
+    │   ├── notifications/
+    │   ├── orders/
+    │   ├── refunds/
+    │   ├── reports/
+    │   ├── reviews/
+    │   ├── services/
+    │   ├── sitemap/
+    │   ├── templates/
+    │   ├── tickets/
+    │   ├── ui-shorts/
+    │   ├── users/
+    │   ├── wishlists/
+    │   └── withdrawals/
+    ├── scripts/
+    │   ├── generate-placeholders.js
+    │   ├── migrate-to-cloudinary.js
+    │   ├── seed.js
+    │   └── seed-extras.js
+    └── services/
+        ├── email.js
+        └── stripeConnect.js
 ```
 
-## Setup & Installation
+## Local Setup
 
-### 1. Install Dependencies
-
+### 1) Install dependencies
 ```bash
 cd server
-npm install
+npm ci
 ```
 
-### 2. Environment Variables
-
+### 2) Configure environment
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your MongoDB URI and secrets.
+Fill required values:
+- `MONGODB_URI`
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
 
-### 3. Start MongoDB
+Recommended integrations:
+- Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+- Cloudinary: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+- Resend: `RESEND_API_KEY`, `FROM_EMAIL`, `FROM_NAME`
 
-Ensure MongoDB is running locally or use MongoDB Atlas.
-
-### 4. Seed Database
-
+### 3) Run database seed
 ```bash
 npm run seed
+npm run seed:extras
 ```
 
-This creates:
-- 1 admin user
-- 2 creators with profiles
-- 2 buyers
-- 6 categories
-- 6 tags
-- 2 templates (1 approved, 1 pending)
-- 1 UI shot
-
-### 5. Start Server
-
-**Development:**
+### 4) Start API
 ```bash
 npm run dev
 ```
 
-**Production:**
+API base: `http://localhost:5000/api`  
+Health: `http://localhost:5000/health`
+
+## Stripe Webhook Setup (Local)
+Use Stripe CLI:
 ```bash
-npm start
+stripe listen --forward-to localhost:5000/api/webhooks/stripe
 ```
 
-Server runs on `http://localhost:5000`
+Copy the webhook signing secret (`whsec_...`) into `STRIPE_WEBHOOK_SECRET`.
 
-## API Endpoints
+## Scripts
+- `npm run dev` - start dev server with nodemon
+- `npm start` - start production server
+- `npm run seed` - primary seed data
+- `npm run seed:extras` - extra seed data
+- `npm run seed:all` - run both seed scripts
+- `npm run generate-placeholders` - placeholder assets
+- `npm run migrate-cloudinary` - migrate local uploads to Cloudinary
+- `npm run migrate` - run schema/data migrations from `scripts/migrations`
+- `npm run test` - integration tests
+- `npm run test:ci` - integration tests (CI mode)
+- `npm run health` - environment/service health checks
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login
-- `POST /api/auth/refresh` - Refresh access token
-- `POST /api/auth/logout` - Logout
-- `GET /api/auth/me` - Get current user
+## API Routes
 
-### Templates
-- `GET /api/templates` - List templates (with filters)
-- `GET /api/templates/:id` - Get template details
-- `POST /api/templates` - Create template (creator only)
-- `PATCH /api/templates/:id` - Update template (creator only)
-- `DELETE /api/templates/:id` - Delete template (creator only)
-- `POST /api/templates/:id/submit` - Submit for review
+Registered prefixes from `src/index.js` are shown below, with endpoints by module.
 
-### Orders
-- `POST /api/orders` - Create order
-- `POST /api/orders/mock-checkout` - Complete order (MVP mock)
-- `GET /api/orders/my-orders` - Get user's orders
-- `GET /api/orders/:id` - Get order details
+### Health
+- `GET /health`
 
-### Downloads
-- `POST /api/downloads/token` - Generate download token
-- `GET /api/downloads/:token` - Download file
-- `GET /api/downloads/licenses/my-licenses` - Get user's licenses
+### Auth (`/api/auth`)
+- `POST /register`
+- `POST /login`
+- `POST /refresh`
+- `POST /logout`
+- `GET /me`
+- `PATCH /profile`
+- `POST /change-password`
+- `POST /forgot-password`
+- `POST /reset-password`
+- `GET /verify-email`
+- `POST /resend-verification`
 
-### Services
-- `POST /api/services/packages` - Create service package (creator)
-- `GET /api/services/packages?templateId=X` - Get packages for template
-- `POST /api/services/orders` - Request service
-- `PATCH /api/services/orders/:id/status` - Update service status
-- `GET /api/services/orders/my-orders` - Get user's service orders
+### Templates (`/api/templates`)
+- `GET /`
+- `GET /my-templates`
+- `GET /:id`
+- `POST /`
+- `PATCH /:id`
+- `DELETE /:id`
+- `POST /:id/submit`
 
-### UI Shorts
-- `GET /api/ui-shorts` - List shots
-- `POST /api/ui-shorts` - Post shot (creator)
-- `POST /api/ui-shorts/:id/like` - Toggle like
-- `POST /api/ui-shorts/:id/save` - Toggle save
+### Template Versions (`/api/templates`)
+- `GET /:templateId/versions`
+- `GET /:templateId/versions/latest`
+- `GET /:templateId/versions/:version`
+- `POST /:templateId/versions`
+- `DELETE /:templateId/versions/:version`
 
-### Admin
-- `GET /api/admin/templates/pending` - Get pending templates
-- `GET /api/admin/templates` - Get all templates (any status)
-- `POST /api/admin/templates/:id/approve` - Approve template
-- `POST /api/admin/templates/:id/reject` - Reject template
+### Orders (`/api/orders`)
+- `POST /`
+- `POST /mock-checkout`
+- `GET /my-orders`
+- `GET /:id`
 
-### Categories & Tags
-- `GET /api/categories` - Get all categories
-- `GET /api/tags` - Get popular tags
-- `POST /api/categories` - Create category (admin only)
+### Checkout (`/api/checkout`)
+- `POST /template`
+- `POST /service`
 
-### Analytics
-- `POST /api/analytics/event` - Track event
-- `GET /api/analytics/metrics` - Get funnel metrics (admin)
+### Webhooks (`/api/webhooks`)
+- `POST /stripe`
 
-## Test Credentials
+### Downloads (`/api/downloads`)
+- `POST /token`
+- `GET /:token`
+- `GET /licenses/my-licenses`
 
-After seeding, use these credentials:
+### Services (`/api/services`)
+- `GET /packages/browse`
+- `GET /packages/mine`
+- `GET /packages/:slug`
+- `GET /packages`
+- `POST /packages`
+- `POST /request-customization`
+- `POST /orders`
+- `GET /orders/my-orders`
+- `GET /orders/:id`
+- `POST /orders/:id/messages`
+- `PATCH /orders/:id/status`
+- `PATCH /orders/:id/buyer-status`
+- `POST /orders/:id/cancel`
+- `POST /orders/:id/dispute`
+- `GET /admin/orders`
+- `GET /admin/creators`
+- `PATCH /admin/orders/:id/reassign`
+- `PATCH /admin/orders/:id/resolve-dispute`
 
-**Admin:**
-```
-Email: admin@flowbites.com
-Password: admin123456
-```
+### UI Shorts (`/api/ui-shorts`)
+- `GET /`
+- `POST /`
+- `POST /:id/like`
+- `POST /:id/save`
+- `GET /admin/all`
+- `DELETE /admin/:id`
+- `PATCH /admin/:id/toggle-published`
 
-**Creator 1:**
-```
-Email: creator1@example.com
-Password: creator123456
-```
+### Admin Core (`/api/admin`)
+- `GET /dashboard-stats`
+- `GET /templates/pending`
+- `GET /templates/stats`
+- `GET /templates/export`
+- `POST /templates/bulk`
+- `GET /templates`
+- `GET /templates/:id`
+- `PATCH /templates/:id`
+- `DELETE /templates/:id`
+- `POST /templates/:id/approve`
+- `POST /templates/:id/reject`
+- `GET /creators/pending`
+- `GET /creators`
+- `GET /creators/:id`
+- `POST /creators/:id/approve`
+- `POST /creators/:id/reject`
+- `PATCH /categories/:id`
+- `DELETE /categories/:id`
+- `POST /categories/reorder`
 
-**Creator 2:**
-```
-Email: creator2@example.com
-Password: creator123456
-```
+### Admin User Management (`/api/admin/users`)
+- `GET /stats`
+- `GET /`
+- `GET /:id`
+- `POST /:id/ban`
+- `POST /:id/unban`
+- `PATCH /:id/role`
 
-**Buyer 1:**
-```
-Email: buyer1@example.com
-Password: buyer123456
-```
+### Admin Audit (`/api/admin/audit`)
+- `GET /`
+- `GET /stats`
+- `GET /:targetType/:targetId`
 
-## Features Implemented
+### Analytics (`/api/analytics`)
+- `POST /event`
+- `GET /metrics`
 
-✅ JWT authentication with refresh tokens
-✅ Role-based access control (buyer, creator, admin)
-✅ Template CRUD with file uploads
-✅ Search & filter templates
-✅ Template moderation workflow
-✅ Secure downloads with expiring tokens
-✅ Service packages & service orders
-✅ UI Shots feed with likes/saves
-✅ Mock checkout flow (Stripe scaffolding ready)
-✅ Analytics event tracking
-✅ Rate limiting & security headers
+### Categories & Tags (`/api`)
+- `GET /categories`
+- `GET /tags`
+- `POST /categories`
+
+### Creators (`/api/creators`)
+- `GET /onboarding/status`
+- `POST /onboarding/personal-info`
+- `POST /onboarding/government-id`
+- `POST /onboarding/selfie`
+- `POST /onboarding/bank-details`
+- `POST /onboarding/creator-reference`
+- `POST /onboarding/submit`
+- `GET /onboarding/search`
+- `POST /connect/onboard`
+- `GET /connect/status`
+- `GET /connect/dashboard`
+- `GET /:identifier`
+- `GET /:identifier/templates`
+- `GET /:identifier/shots`
+
+### Earnings (`/api/earnings`)
+- `GET /summary`
+- `GET /transactions`
+
+### Search (`/api/search`)
+- `GET /autocomplete`
+- `GET /popular`
+
+### Blog (`/api/blog`)
+- `GET /`
+- `GET /categories`
+- `GET /tags`
+- `GET /featured`
+- `GET /:slug`
+- `POST /`
+- `PATCH /:id`
+- `DELETE /:id`
+- `GET /admin/all`
+- `GET /admin/:id`
+
+### Sitemap (`/api`)
+- `GET /sitemap.xml`
+
+### Reviews (`/api/reviews`)
+- `GET /template/:templateId`
+- `GET /check/:templateId`
+- `POST /template/:templateId`
+- `PATCH /:reviewId`
+- `DELETE /:reviewId`
+- `GET /admin/all`
+- `PATCH /admin/:reviewId/moderate`
+
+### Refunds (`/api/refunds`)
+- `POST /request`
+- `GET /order/:orderId`
+- `GET /admin`
+- `POST /admin/:refundId/approve`
+- `POST /admin/:refundId/reject`
+
+### Notifications (`/api/notifications`)
+- `GET /`
+- `GET /unread-count`
+- `PATCH /read-all`
+- `PATCH /:id/read`
+- `DELETE /:id`
+
+### Wishlists (`/api/wishlists`)
+- `GET /count/:templateId`
+- `GET /`
+- `GET /check/:templateId`
+- `POST /check-bulk`
+- `POST /:templateId`
+- `DELETE /:templateId`
+
+### Coupons (`/api/coupons`)
+- `POST /validate`
+- `GET /admin`
+- `POST /admin`
+- `PATCH /admin/:couponId`
+- `DELETE /admin/:couponId`
+
+### Followers (`/api/followers`)
+- `GET /count/:creatorId`
+- `GET /following`
+- `GET /check/:creatorId`
+- `GET /creator/:creatorId`
+- `POST /:creatorId`
+- `DELETE /:creatorId`
+
+### Reports (`/api/reports`)
+- `POST /`
+- `GET /admin`
+- `GET /admin/stats`
+- `GET /admin/:id`
+- `POST /admin/:id/resolve`
+- `POST /admin/:id/dismiss`
+
+### Withdrawals (`/api/withdrawals`)
+- `GET /balance`
+- `GET /my`
+- `POST /request`
+- `GET /admin`
+- `POST /admin/:id/approve`
+- `POST /admin/:id/reject`
+- `POST /admin/:id/complete`
+
+### Tickets (`/api/tickets`)
+- `POST /`
+- `GET /my`
+- `GET /:id`
+- `POST /:id/reply`
+- `POST /:id/close`
+- `GET /admin/all`
+- `GET /admin/stats`
+- `POST /admin/:id/assign`
+- `POST /admin/:id/resolve`
+
+## Seed Test Accounts
+From `src/scripts/seed.js`:
+
+- Super Admin
+  - `superadmin@flowbites.com` / `superadmin2024!`
+- Flowbites Admin (also official creator)
+  - `admin@flowbites.com` / `flowbites2024!`
+- Community Creators
+  - `creator1@example.com` / `password123`
+  - `creator2@example.com` / `password123`
+- Buyers
+  - `buyer1@example.com` / `password123`
+  - `buyer2@example.com` / `password123`
 
 ## Security Features
-
-- Helmet.js for HTTP headers
-- CORS configured
-- Rate limiting on all routes
-- JWT with httpOnly cookies
-- File upload validation
-- Input validation with Zod
+- JWT auth with access + refresh tokens
+- Role-based and admin authorization guards
+- Zod request validation on critical write endpoints
 - Password hashing with bcrypt
+- Cookie hardening (`httpOnly`, secure/sameSite behavior by env)
+- NoSQL sanitization middleware
+- Global + auth + targeted per-user rate limiting
+- Stripe webhook signature verification
+- Upload extension + MIME checks with SVG restrictions
+- Audit logging for sensitive admin actions
 
-## Next Steps (Post-MVP)
-
-- [ ] Integrate real Stripe payments
-- [ ] Upload to S3 instead of local storage
-- [ ] Email notifications (welcome, purchase, service)
-- [ ] Reviews & ratings
-- [ ] Creator payouts
-- [ ] Advanced analytics dashboard
-- [ ] Template versioning
-- [ ] Automated testing suite
-
-## Support
-
-For issues, check the error logs and ensure:
-1. MongoDB is running
-2. Environment variables are set
-3. Dependencies are installed
-4. Database is seeded
+## Notes
+- API reference with request/response details: `docs/api-reference.md`
+- Security audit: `docs/security-audit.md`
+- Monitoring guide: `docs/monitoring-guide.md`

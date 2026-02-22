@@ -1,84 +1,145 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { api } from '@/lib/api/client';
-import type { Category } from '@/types';
-import { Button, Input } from '@/design-system';
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { api } from "@/lib/api/client";
+import type { Category } from "@/types";
+import { Button, Input } from "@/design-system";
 import {
-  Upload, X, Image as ImageIcon, FileArchive, Link2, Info,
-  ChevronRight, ChevronLeft, Check, DollarSign, Eye,
-  Globe, Figma, Monitor, AlertCircle, Send, Gift,
-  ShieldCheck, Clock, XCircle, ClipboardList, Loader2,
-} from 'lucide-react';
+  Upload,
+  X,
+  Image as ImageIcon,
+  FileArchive,
+  Link2,
+  Info,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  DollarSign,
+  Eye,
+  Globe,
+  Figma,
+  Monitor,
+  AlertCircle,
+  Send,
+  Gift,
+  ShieldCheck,
+  Clock,
+  XCircle,
+  ClipboardList,
+  Loader2,
+} from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /*  Schema                                                             */
 /* ------------------------------------------------------------------ */
 
-const templateSchema = z.object({
-  title: z.string().min(1, 'Template name is required').max(200, 'Name must be under 200 characters'),
-  description: z.string().min(10, 'Description must be at least 10 characters').max(5000, 'Description must be under 5,000 characters'),
-  metaDescription: z.string().max(160, 'Meta description must be under 160 characters').optional().or(z.literal('')),
-  platform: z.enum(['webflow', 'framer', 'wix'], { required_error: 'Please select a platform' }),
-  category: z.string().min(1, 'Please select a category'),
-  price: z.coerce.number().min(0, 'Price must be 0 or more'),
-  licenseType: z.enum(['personal', 'commercial', 'extended']),
-  demoUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  deliveryUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-});
-
-type TemplateForm = z.infer<typeof templateSchema>;
+type TemplateForm = {
+  title: string;
+  description: string;
+  metaDescription?: string;
+  platform: "webflow" | "framer" | "wix";
+  category: string;
+  price: number;
+  licenseType: "personal" | "commercial" | "extended";
+  demoUrl?: string;
+  deliveryUrl?: string;
+};
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
 
 const STEPS = [
-  { id: 'basics', label: 'Basics', description: 'Name, platform & category' },
-  { id: 'details', label: 'Details & Pricing', description: 'Description, pricing & license' },
-  { id: 'media', label: 'Media & Delivery', description: 'Images and template files' },
-  { id: 'review', label: 'Review & Submit', description: 'Review and publish' },
+  { id: "basics", label: "Basics", description: "Name, platform & category" },
+  {
+    id: "details",
+    label: "Details & Pricing",
+    description: "Description, pricing & license",
+  },
+  {
+    id: "media",
+    label: "Media & Delivery",
+    description: "Images and template files",
+  },
+  { id: "review", label: "Review & Submit", description: "Review and publish" },
 ];
 
 const PLATFORMS = [
   {
-    value: 'webflow' as const,
-    label: 'Webflow',
-    description: 'Clone link delivery',
+    value: "webflow" as const,
+    label: "Webflow",
+    description: "Clone link delivery",
     Icon: Globe,
-    accent: 'blue',
+    accent: "blue",
   },
   {
-    value: 'framer' as const,
-    label: 'Framer',
-    description: 'Remix link delivery',
+    value: "framer" as const,
+    label: "Framer",
+    description: "Remix link delivery",
     Icon: Figma,
-    accent: 'purple',
+    accent: "purple",
   },
   {
-    value: 'wix' as const,
-    label: 'Wix',
-    description: 'File download delivery',
+    value: "wix" as const,
+    label: "Wix",
+    description: "File download delivery",
     Icon: Monitor,
-    accent: 'amber',
+    accent: "amber",
   },
 ];
 
 const LICENSES = [
-  { value: 'personal' as const, label: 'Personal', description: 'For personal, non-commercial projects' },
-  { value: 'commercial' as const, label: 'Commercial', description: 'For client work and commercial use' },
-  { value: 'extended' as const, label: 'Extended', description: 'Unlimited usage including resale' },
+  {
+    value: "personal" as const,
+    label: "Personal",
+    description: "For personal, non-commercial projects",
+  },
+  {
+    value: "commercial" as const,
+    label: "Commercial",
+    description: "For client work and commercial use",
+  },
+  {
+    value: "extended" as const,
+    label: "Extended",
+    description: "Unlimited usage including resale",
+  },
 ];
 
-const PLATFORM_ACCENTS: Record<string, { bg: string; border: string; activeBorder: string; text: string; ring: string }> = {
-  blue:   { bg: 'bg-blue-50',   border: 'border-blue-200',   activeBorder: 'border-blue-500',   text: 'text-blue-600',   ring: 'ring-blue-500/20' },
-  purple: { bg: 'bg-purple-50', border: 'border-purple-200', activeBorder: 'border-purple-500', text: 'text-purple-600', ring: 'ring-purple-500/20' },
-  amber:  { bg: 'bg-amber-50',  border: 'border-amber-200',  activeBorder: 'border-amber-500',  text: 'text-amber-600',  ring: 'ring-amber-500/20' },
+const PLATFORM_ACCENTS: Record<
+  string,
+  {
+    bg: string;
+    border: string;
+    activeBorder: string;
+    text: string;
+    ring: string;
+  }
+> = {
+  blue: {
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+    activeBorder: "border-blue-500",
+    text: "text-blue-600",
+    ring: "ring-blue-500/20",
+  },
+  purple: {
+    bg: "bg-purple-50",
+    border: "border-purple-200",
+    activeBorder: "border-purple-500",
+    text: "text-purple-600",
+    ring: "ring-purple-500/20",
+  },
+  amber: {
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    activeBorder: "border-amber-500",
+    text: "text-amber-600",
+    ring: "ring-amber-500/20",
+  },
 };
 
 /* ------------------------------------------------------------------ */
@@ -86,16 +147,19 @@ const PLATFORM_ACCENTS: Record<string, { bg: string; border: string; activeBorde
 /* ------------------------------------------------------------------ */
 
 function extractError(err: unknown): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    return (err as { response?: { data?: { error?: string } } }).response?.data?.error || '';
+  if (err && typeof err === "object" && "response" in err) {
+    return (
+      (err as { response?: { data?: { error?: string } } }).response?.data
+        ?.error || ""
+    );
   }
-  return '';
+  return "";
 }
 
 function getDeliveryType(platform: string) {
-  if (platform === 'webflow') return 'clone_link';
-  if (platform === 'framer') return 'remix_link';
-  return 'file_download';
+  if (platform === "webflow") return "clone_link";
+  if (platform === "framer") return "remix_link";
+  return "file_download";
 }
 
 function formatFileSize(bytes: number): string {
@@ -105,7 +169,9 @@ function formatFileSize(bytes: number): string {
 }
 
 const CharCounter = ({ current, max }: { current: number; max: number }) => (
-  <span className={`text-xs tabular-nums ${current > max ? 'text-error font-medium' : current > max * 0.85 ? 'text-amber-500' : 'text-neutral-400'}`}>
+  <span
+    className={`text-xs tabular-nums ${current > max ? "text-error font-medium" : current > max * 0.85 ? "text-amber-500" : "text-neutral-400"}`}
+  >
     {current.toLocaleString()}/{max.toLocaleString()}
   </span>
 );
@@ -114,14 +180,22 @@ const CharCounter = ({ current, max }: { current: number; max: number }) => (
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-type OnboardingStatus = 'loading' | 'pending' | 'in_progress' | 'submitted' | 'approved' | 'rejected' | 'error';
+type OnboardingStatus =
+  | "loading"
+  | "pending"
+  | "in_progress"
+  | "submitted"
+  | "approved"
+  | "rejected"
+  | "error";
 
 export const TemplateUploadForm = () => {
   const router = useRouter();
 
   // ── Verification gate ──
-  const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus>('loading');
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [onboardingStatus, setOnboardingStatus] =
+    useState<OnboardingStatus>("loading");
+  const [rejectionReason, setRejectionReason] = useState("");
 
   // ── Step state ──
   const [currentStep, setCurrentStep] = useState(0);
@@ -140,7 +214,7 @@ export const TemplateUploadForm = () => {
 
   // ── UI state ──
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [thumbDrag, setThumbDrag] = useState(false);
   const [galleryDrag, setGalleryDrag] = useState(false);
 
@@ -154,20 +228,19 @@ export const TemplateUploadForm = () => {
     setValue,
     formState: { errors },
   } = useForm<TemplateForm>({
-    resolver: zodResolver(templateSchema),
     defaultValues: {
-      platform: 'webflow',
-      licenseType: 'personal',
+      platform: "webflow",
+      licenseType: "personal",
       price: 0,
-      metaDescription: '',
-      demoUrl: '',
-      deliveryUrl: '',
+      metaDescription: "",
+      demoUrl: "",
+      deliveryUrl: "",
     },
   });
 
-  const selectedPlatform = watch('platform');
-  const descriptionValue = watch('description') || '';
-  const metaDescValue = watch('metaDescription') || '';
+  const selectedPlatform = watch("platform");
+  const descriptionValue = watch("description") || "";
+  const metaDescValue = watch("metaDescription") || "";
 
   // ── Effects ──
 
@@ -175,23 +248,23 @@ export const TemplateUploadForm = () => {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await api.get('/creators/onboarding/status');
-        const status = data.data?.onboarding?.status || 'pending';
+        const { data } = await api.get("/creators/onboarding/status");
+        const status = data.data?.onboarding?.status || "pending";
         setOnboardingStatus(status);
-        if (status === 'rejected') {
-          setRejectionReason(data.data?.onboarding?.rejectionReason || '');
+        if (status === "rejected") {
+          setRejectionReason(data.data?.onboarding?.rejectionReason || "");
         }
       } catch {
-        setOnboardingStatus('error');
+        setOnboardingStatus("error");
       }
     })();
   }, []);
 
   useEffect(() => {
-    if (onboardingStatus !== 'approved') return;
+    if (onboardingStatus !== "approved") return;
     (async () => {
       try {
-        const { data } = await api.get('/categories');
+        const { data } = await api.get("/categories");
         setCategories(data.data);
       } catch {
         /* silent – categories just won't load */
@@ -201,117 +274,172 @@ export const TemplateUploadForm = () => {
 
   // Scroll to top on step change
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setError('');
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setError("");
   }, [currentStep]);
+
+  // Revoke all object URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+      galleryPreviews.forEach((url) => URL.revokeObjectURL(url));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── File handlers ──
   const setThumbnailFile = useCallback((file: File) => {
     setThumbnail(file);
-    setThumbnailPreview(URL.createObjectURL(file));
+    setThumbnailPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
   }, []);
 
   const removeThumbnail = useCallback(() => {
     setThumbnail(null);
-    setThumbnailPreview(null);
+    setThumbnailPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
   }, []);
 
-  const handleThumbnailInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setThumbnailFile(file);
-  }, [setThumbnailFile]);
+  const handleThumbnailInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) setThumbnailFile(file);
+    },
+    [setThumbnailFile],
+  );
 
   const handleThumbDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setThumbDrag(e.type === 'dragenter' || e.type === 'dragover');
+    setThumbDrag(e.type === "dragenter" || e.type === "dragover");
   }, []);
 
-  const handleThumbDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setThumbDrag(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) setThumbnailFile(file);
-  }, [setThumbnailFile]);
+  const handleThumbDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setThumbDrag(false);
+      const file = e.dataTransfer.files?.[0];
+      if (file && file.type.startsWith("image/")) setThumbnailFile(file);
+    },
+    [setThumbnailFile],
+  );
 
-  const handleGalleryInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const remaining = 5 - gallery.length;
-    if (remaining <= 0) return;
-    const toAdd = files.slice(0, remaining);
-    setGallery(prev => [...prev, ...toAdd]);
-    setGalleryPreviews(prev => [...prev, ...toAdd.map(f => URL.createObjectURL(f))]);
-  }, [gallery.length]);
+  const handleGalleryInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      const remaining = 5 - gallery.length;
+      if (remaining <= 0) return;
+      const toAdd = files.slice(0, remaining);
+      setGallery((prev) => [...prev, ...toAdd]);
+      setGalleryPreviews((prev) => [
+        ...prev,
+        ...toAdd.map((f) => URL.createObjectURL(f)),
+      ]);
+    },
+    [gallery.length],
+  );
 
   const handleGalleryDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setGalleryDrag(e.type === 'dragenter' || e.type === 'dragover');
+    setGalleryDrag(e.type === "dragenter" || e.type === "dragover");
   }, []);
 
-  const handleGalleryDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setGalleryDrag(false);
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-    const remaining = 5 - gallery.length;
-    if (remaining <= 0) return;
-    const toAdd = files.slice(0, remaining);
-    setGallery(prev => [...prev, ...toAdd]);
-    setGalleryPreviews(prev => [...prev, ...toAdd.map(f => URL.createObjectURL(f))]);
-  }, [gallery.length]);
+  const handleGalleryDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setGalleryDrag(false);
+      const files = Array.from(e.dataTransfer.files).filter((f) =>
+        f.type.startsWith("image/"),
+      );
+      const remaining = 5 - gallery.length;
+      if (remaining <= 0) return;
+      const toAdd = files.slice(0, remaining);
+      setGallery((prev) => [...prev, ...toAdd]);
+      setGalleryPreviews((prev) => [
+        ...prev,
+        ...toAdd.map((f) => URL.createObjectURL(f)),
+      ]);
+    },
+    [gallery.length],
+  );
 
   const removeGalleryImage = useCallback((index: number) => {
-    setGallery(prev => prev.filter((_, i) => i !== index));
-    setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
+    setGallery((prev) => prev.filter((_, i) => i !== index));
+    setGalleryPreviews((prev) => {
+      if (prev[index]) URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
   }, []);
 
-  const handleTemplateFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setTemplateFile(file);
-  }, []);
+  const handleTemplateFileInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) setTemplateFile(file);
+    },
+    [],
+  );
 
   // ── Free/paid toggle ──
-  const handleFreeToggle = useCallback((free: boolean) => {
-    setIsFree(free);
-    if (free) setValue('price', 0);
-  }, [setValue]);
+  const handleFreeToggle = useCallback(
+    (free: boolean) => {
+      setIsFree(free);
+      if (free) setValue("price", 0);
+    },
+    [setValue],
+  );
 
   // ── Platform change (reset delivery) ──
-  const handlePlatformChange = useCallback((platform: 'webflow' | 'framer' | 'wix') => {
-    setValue('platform', platform, { shouldValidate: true });
-    setValue('deliveryUrl', '');
-    setTemplateFile(null);
-  }, [setValue]);
+  const handlePlatformChange = useCallback(
+    (platform: "webflow" | "framer" | "wix") => {
+      setValue("platform", platform, { shouldValidate: true });
+      setValue("deliveryUrl", "");
+      setTemplateFile(null);
+    },
+    [setValue],
+  );
 
   // ── Step validation ──
   const validateStep = async (step: number): Promise<boolean> => {
-    setError('');
+    setError("");
     switch (step) {
       case 0:
-        return trigger(['title', 'platform', 'category']);
+        return trigger(["title", "platform", "category"]);
       case 1: {
-        const valid = await trigger(['description', 'metaDescription', 'demoUrl', 'price']);
+        const valid = await trigger([
+          "description",
+          "metaDescription",
+          "demoUrl",
+          "price",
+        ]);
         return valid;
       }
       case 2: {
-        if (!thumbnail) { setError('Please upload a thumbnail image'); return false; }
-        const plat = getValues('platform');
-        if (plat === 'webflow' && !getValues('deliveryUrl')) {
-          setError('Webflow clone link is required');
+        if (!thumbnail) {
+          setError("Please upload a thumbnail image");
           return false;
         }
-        if (plat === 'framer' && !getValues('deliveryUrl')) {
-          setError('Framer remix link is required');
+        const plat = getValues("platform");
+        if (plat === "webflow" && !getValues("deliveryUrl")) {
+          setError("Webflow clone link is required");
           return false;
         }
-        if (plat === 'wix' && !templateFile) {
-          setError('Template file (.zip) is required for Wix');
+        if (plat === "framer" && !getValues("deliveryUrl")) {
+          setError("Framer remix link is required");
           return false;
         }
-        if (getValues('deliveryUrl')) {
-          return trigger(['deliveryUrl']);
+        if (plat === "wix" && !templateFile) {
+          setError("Template file (.zip) is required for Wix");
+          return false;
+        }
+        if (getValues("deliveryUrl")) {
+          return trigger(["deliveryUrl"]);
         }
         return true;
       }
@@ -322,57 +450,68 @@ export const TemplateUploadForm = () => {
 
   const goNext = async () => {
     const valid = await validateStep(currentStep);
-    if (valid) setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
+    if (valid) setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
   };
 
-  const goBack = () => setCurrentStep(prev => Math.max(prev - 1, 0));
+  const goBack = () => setCurrentStep((prev) => Math.max(prev - 1, 0));
 
   // ── Submit ──
   const onSubmit = async (values: TemplateForm, submitForReview: boolean) => {
-    if (!thumbnail) { setError('Please upload a thumbnail image'); return; }
+    if (!thumbnail) {
+      setError("Please upload a thumbnail image");
+      return;
+    }
 
     const deliveryType = getDeliveryType(values.platform);
 
-    if (deliveryType === 'clone_link' && !values.deliveryUrl) {
-      setError('Webflow clone link is required'); return;
+    if (deliveryType === "clone_link" && !values.deliveryUrl) {
+      setError("Webflow clone link is required");
+      return;
     }
-    if (deliveryType === 'remix_link' && !values.deliveryUrl) {
-      setError('Framer remix link is required'); return;
+    if (deliveryType === "remix_link" && !values.deliveryUrl) {
+      setError("Framer remix link is required");
+      return;
     }
-    if (deliveryType === 'file_download' && !templateFile) {
-      setError('Template file (.zip) is required'); return;
+    if (deliveryType === "file_download" && !templateFile) {
+      setError("Template file (.zip) is required");
+      return;
     }
 
     setSubmitting(true);
-    setError('');
+    setError("");
 
     try {
       const formData = new FormData();
-      formData.append('title', values.title);
-      formData.append('description', values.description);
-      formData.append('platform', values.platform);
-      formData.append('category', values.category);
-      formData.append('price', String(isFree ? 0 : values.price));
-      formData.append('deliveryType', deliveryType);
-      if (values.deliveryUrl) formData.append('deliveryUrl', values.deliveryUrl);
-      if (values.licenseType) formData.append('licenseType', values.licenseType);
-      if (values.demoUrl) formData.append('demoUrl', values.demoUrl);
-      if (values.metaDescription) formData.append('metaDescription', values.metaDescription);
-      formData.append('thumbnail', thumbnail);
-      gallery.forEach(file => formData.append('gallery', file));
-      if (templateFile) formData.append('templateFile', templateFile);
+      formData.append("title", values.title);
+      formData.append("description", values.description);
+      formData.append("platform", values.platform);
+      formData.append("category", values.category);
+      formData.append("price", String(isFree ? 0 : values.price));
+      formData.append("deliveryType", deliveryType);
+      if (values.deliveryUrl)
+        formData.append("deliveryUrl", values.deliveryUrl);
+      if (values.licenseType)
+        formData.append("licenseType", values.licenseType);
+      if (values.demoUrl) formData.append("demoUrl", values.demoUrl);
+      if (values.metaDescription)
+        formData.append("metaDescription", values.metaDescription);
+      formData.append("thumbnail", thumbnail);
+      gallery.forEach((file) => formData.append("gallery", file));
+      if (templateFile) formData.append("templateFile", templateFile);
 
-      const { data } = await api.post('/templates', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const { data } = await api.post("/templates", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (submitForReview) {
         await api.post(`/templates/${data.data._id}/submit`);
       }
 
-      router.push('/dashboard/creator');
+      router.push("/dashboard/creator");
     } catch (err: unknown) {
-      setError(extractError(err) || 'Failed to submit template. Please try again.');
+      setError(
+        extractError(err) || "Failed to submit template. Please try again.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -382,15 +521,15 @@ export const TemplateUploadForm = () => {
   /*  RENDER                                                           */
   /* ================================================================ */
 
-  const platformInfo = PLATFORMS.find(p => p.value === selectedPlatform)!;
+  const platformInfo = PLATFORMS.find((p) => p.value === selectedPlatform)!;
   const accent = PLATFORM_ACCENTS[platformInfo.accent];
 
   /* ── Verification gate ── */
-  if (onboardingStatus !== 'approved') {
+  if (onboardingStatus !== "approved") {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 sm:py-24">
         <div className="text-center">
-          {onboardingStatus === 'loading' && (
+          {onboardingStatus === "loading" && (
             <>
               <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Loader2 size={28} className="text-neutral-400 animate-spin" />
@@ -404,7 +543,8 @@ export const TemplateUploadForm = () => {
             </>
           )}
 
-          {(onboardingStatus === 'pending' || onboardingStatus === 'in_progress') && (
+          {(onboardingStatus === "pending" ||
+            onboardingStatus === "in_progress") && (
             <>
               <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <ClipboardList size={28} className="text-amber-500" />
@@ -413,8 +553,9 @@ export const TemplateUploadForm = () => {
                 Complete Your Verification
               </h1>
               <p className="text-neutral-500 mb-8 max-w-md mx-auto">
-                Before you can submit templates, you need to complete the creator onboarding process.
-                This helps us verify your identity and set up your payout information.
+                Before you can submit templates, you need to complete the
+                creator onboarding process. This helps us verify your identity
+                and set up your payout information.
               </p>
               <div className="space-y-3">
                 <Link href="/dashboard/creator/onboarding">
@@ -423,7 +564,10 @@ export const TemplateUploadForm = () => {
                   </Button>
                 </Link>
                 <div>
-                  <Link href="/dashboard/creator" className="text-sm text-neutral-500 hover:text-neutral-700">
+                  <Link
+                    href="/dashboard/creator"
+                    className="text-sm text-neutral-500 hover:text-neutral-700"
+                  >
                     Back to Dashboard
                   </Link>
                 </div>
@@ -431,7 +575,7 @@ export const TemplateUploadForm = () => {
             </>
           )}
 
-          {onboardingStatus === 'submitted' && (
+          {onboardingStatus === "submitted" && (
             <>
               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Clock size={28} className="text-blue-500" />
@@ -440,25 +584,29 @@ export const TemplateUploadForm = () => {
                 Verification Under Review
               </h1>
               <p className="text-neutral-500 mb-4 max-w-md mx-auto">
-                Your creator application has been submitted and is being reviewed by our team.
-                You&apos;ll be able to submit templates once your account is approved.
+                Your creator application has been submitted and is being
+                reviewed by our team. You&apos;ll be able to submit templates
+                once your account is approved.
               </p>
               <div className="inline-flex items-start gap-3 text-left bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8 max-w-md">
                 <Info size={16} className="text-blue-600 mt-0.5 shrink-0" />
                 <p className="text-sm text-blue-800">
-                  Reviews typically take 1–3 business days. You&apos;ll receive an email notification
-                  when your application is approved.
+                  Reviews typically take 1–3 business days. You&apos;ll receive
+                  an email notification when your application is approved.
                 </p>
               </div>
               <div>
-                <Link href="/dashboard/creator" className="text-sm text-neutral-500 hover:text-neutral-700">
+                <Link
+                  href="/dashboard/creator"
+                  className="text-sm text-neutral-500 hover:text-neutral-700"
+                >
                   Back to Dashboard
                 </Link>
               </div>
             </>
           )}
 
-          {onboardingStatus === 'rejected' && (
+          {onboardingStatus === "rejected" && (
             <>
               <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <XCircle size={28} className="text-red-500" />
@@ -467,12 +615,16 @@ export const TemplateUploadForm = () => {
                 Verification Not Approved
               </h1>
               <p className="text-neutral-500 mb-4 max-w-md mx-auto">
-                Your creator application was not approved. Please review the feedback below
-                and update your onboarding information to resubmit.
+                Your creator application was not approved. Please review the
+                feedback below and update your onboarding information to
+                resubmit.
               </p>
               {rejectionReason && (
                 <div className="inline-flex items-start gap-3 text-left bg-red-50 border border-red-200 rounded-xl p-4 mb-8 max-w-md">
-                  <AlertCircle size={16} className="text-red-600 mt-0.5 shrink-0" />
+                  <AlertCircle
+                    size={16}
+                    className="text-red-600 mt-0.5 shrink-0"
+                  />
                   <div className="text-sm text-red-800">
                     <p className="font-semibold mb-1">Reason</p>
                     <p>{rejectionReason}</p>
@@ -486,7 +638,10 @@ export const TemplateUploadForm = () => {
                   </Button>
                 </Link>
                 <div>
-                  <Link href="/dashboard/creator" className="text-sm text-neutral-500 hover:text-neutral-700">
+                  <Link
+                    href="/dashboard/creator"
+                    className="text-sm text-neutral-500 hover:text-neutral-700"
+                  >
                     Back to Dashboard
                   </Link>
                 </div>
@@ -494,7 +649,7 @@ export const TemplateUploadForm = () => {
             </>
           )}
 
-          {onboardingStatus === 'error' && (
+          {onboardingStatus === "error" && (
             <>
               <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <AlertCircle size={28} className="text-neutral-400" />
@@ -503,14 +658,18 @@ export const TemplateUploadForm = () => {
                 Unable to Verify Status
               </h1>
               <p className="text-neutral-500 mb-8 max-w-md mx-auto">
-                We couldn&apos;t check your creator verification status. Please try again or contact support.
+                We couldn&apos;t check your creator verification status. Please
+                try again or contact support.
               </p>
               <div className="space-y-3">
                 <Button size="lg" onClick={() => window.location.reload()}>
                   Try Again
                 </Button>
                 <div>
-                  <Link href="/dashboard/creator" className="text-sm text-neutral-500 hover:text-neutral-700">
+                  <Link
+                    href="/dashboard/creator"
+                    className="text-sm text-neutral-500 hover:text-neutral-700"
+                  >
                     Back to Dashboard
                   </Link>
                 </div>
@@ -524,7 +683,6 @@ export const TemplateUploadForm = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
-
       {/* ── Header ── */}
       <div className="text-center mb-10">
         <h1 className="text-3xl sm:text-4xl font-display font-bold text-neutral-900 mb-2">
@@ -558,35 +716,48 @@ export const TemplateUploadForm = () => {
           const isActive = i === currentStep;
           const isComplete = i < currentStep;
           return (
-            <div key={step.id} className="flex items-center flex-1 last:flex-none">
+            <div
+              key={step.id}
+              className="flex items-center flex-1 last:flex-none"
+            >
               <button
                 type="button"
-                onClick={() => { if (isComplete) setCurrentStep(i); }}
+                onClick={() => {
+                  if (isComplete) setCurrentStep(i);
+                }}
                 disabled={!isComplete && !isActive}
                 className={`flex items-center gap-3 transition-colors ${
-                  isComplete ? 'cursor-pointer' : 'cursor-default'
+                  isComplete ? "cursor-pointer" : "cursor-default"
                 }`}
               >
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 transition-colors ${
-                  isActive
-                    ? 'bg-primary-500 text-white shadow-md shadow-primary-500/25'
-                    : isComplete
-                      ? 'bg-primary-100 text-primary-600'
-                      : 'bg-neutral-100 text-neutral-400'
-                }`}>
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 transition-colors ${
+                    isActive
+                      ? "bg-primary-500 text-white shadow-md shadow-primary-500/25"
+                      : isComplete
+                        ? "bg-primary-100 text-primary-600"
+                        : "bg-neutral-100 text-neutral-400"
+                  }`}
+                >
                   {isComplete ? <Check size={16} /> : i + 1}
                 </div>
                 <div className="text-left">
-                  <div className={`text-sm font-medium ${isActive ? 'text-neutral-900' : isComplete ? 'text-primary-600' : 'text-neutral-400'}`}>
+                  <div
+                    className={`text-sm font-medium ${isActive ? "text-neutral-900" : isComplete ? "text-primary-600" : "text-neutral-400"}`}
+                  >
                     {step.label}
                   </div>
-                  <div className={`text-xs ${isActive ? 'text-neutral-500' : 'text-neutral-400'} hidden lg:block`}>
+                  <div
+                    className={`text-xs ${isActive ? "text-neutral-500" : "text-neutral-400"} hidden lg:block`}
+                  >
                     {step.description}
                   </div>
                 </div>
               </button>
               {i < STEPS.length - 1 && (
-                <div className={`flex-1 h-px mx-4 ${isComplete ? 'bg-primary-300' : 'bg-neutral-200'}`} />
+                <div
+                  className={`flex-1 h-px mx-4 ${isComplete ? "bg-primary-300" : "bg-neutral-200"}`}
+                />
               )}
             </div>
           );
@@ -598,7 +769,11 @@ export const TemplateUploadForm = () => {
         <div className="flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 animate-in fade-in">
           <AlertCircle size={18} className="mt-0.5 shrink-0" />
           <div className="text-sm flex-1">{error}</div>
-          <button type="button" onClick={() => setError('')} className="text-red-400 hover:text-red-600">
+          <button
+            type="button"
+            onClick={() => setError("")}
+            className="text-red-400 hover:text-red-600"
+          >
             <X size={16} />
           </button>
         </div>
@@ -606,13 +781,11 @@ export const TemplateUploadForm = () => {
 
       {/* ── Form ── */}
       <form onSubmit={(e) => e.preventDefault()}>
-
         {/* ============================================================ */}
         {/*  STEP 0 — Basics                                             */}
         {/* ============================================================ */}
         {currentStep === 0 && (
           <div className="space-y-8">
-
             {/* Template Name */}
             <div>
               <Input
@@ -620,7 +793,7 @@ export const TemplateUploadForm = () => {
                 placeholder="e.g. Horizon — SaaS Landing Page"
                 error={errors.title?.message}
                 helperText="Choose a unique, descriptive name. No generic names or keyword stuffing."
-                {...register('title')}
+                {...register("title")}
               />
             </div>
 
@@ -630,7 +803,8 @@ export const TemplateUploadForm = () => {
                 Platform <span className="text-error">*</span>
               </label>
               <p className="text-sm text-neutral-500 mb-3">
-                Select the platform your template is built for. This determines how buyers will receive it.
+                Select the platform your template is built for. This determines
+                how buyers will receive it.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {PLATFORMS.map((p) => {
@@ -644,7 +818,7 @@ export const TemplateUploadForm = () => {
                       className={`relative flex flex-col items-center gap-2 p-5 rounded-xl border-2 transition-all duration-200 ${
                         isSelected
                           ? `${a.bg} ${a.activeBorder} ring-2 ${a.ring}`
-                          : 'border-neutral-200 bg-white hover:border-neutral-300'
+                          : "border-neutral-200 bg-white hover:border-neutral-300"
                       }`}
                     >
                       {isSelected && (
@@ -652,14 +826,25 @@ export const TemplateUploadForm = () => {
                           <Check size={12} className="text-white" />
                         </div>
                       )}
-                      <p.Icon size={28} className={isSelected ? a.text : 'text-neutral-400'} />
-                      <div className="font-semibold text-sm text-neutral-900">{p.label}</div>
-                      <div className="text-xs text-neutral-500">{p.description}</div>
+                      <p.Icon
+                        size={28}
+                        className={isSelected ? a.text : "text-neutral-400"}
+                      />
+                      <div className="font-semibold text-sm text-neutral-900">
+                        {p.label}
+                      </div>
+                      <div className="text-xs text-neutral-500">
+                        {p.description}
+                      </div>
                     </button>
                   );
                 })}
               </div>
-              {errors.platform && <p className="text-sm text-error mt-2">{errors.platform.message}</p>}
+              {errors.platform && (
+                <p className="text-sm text-error mt-2">
+                  {errors.platform.message}
+                </p>
+              )}
             </div>
 
             {/* Category */}
@@ -674,15 +859,21 @@ export const TemplateUploadForm = () => {
                 className={`w-full h-11 rounded-lg border bg-white text-neutral-900 px-4
                   focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:outline-none
                   transition-colors duration-200
-                  ${errors.category ? 'border-error' : 'border-neutral-300'}`}
-                {...register('category')}
+                  ${errors.category ? "border-error" : "border-neutral-300"}`}
+                {...register("category")}
               >
                 <option value="">Select a category...</option>
                 {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>{cat.name}</option>
+                  <option key={cat._id} value={cat._id}>
+                    {cat.name}
+                  </option>
                 ))}
               </select>
-              {errors.category && <p className="text-sm text-error mt-1.5">{errors.category.message}</p>}
+              {errors.category && (
+                <p className="text-sm text-error mt-1.5">
+                  {errors.category.message}
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -692,7 +883,6 @@ export const TemplateUploadForm = () => {
         {/* ============================================================ */}
         {currentStep === 1 && (
           <div className="space-y-8">
-
             {/* Description */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -702,7 +892,8 @@ export const TemplateUploadForm = () => {
                 <CharCounter current={descriptionValue.length} max={5000} />
               </div>
               <p className="text-sm text-neutral-500 mb-3">
-                Describe what your template includes, who it&apos;s for, and what makes it stand out.
+                Describe what your template includes, who it&apos;s for, and
+                what makes it stand out.
               </p>
               <textarea
                 rows={7}
@@ -710,11 +901,15 @@ export const TemplateUploadForm = () => {
                   placeholder:text-neutral-400
                   focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:outline-none
                   transition-colors duration-200 resize-y
-                  ${errors.description ? 'border-error' : 'border-neutral-300'}`}
+                  ${errors.description ? "border-error" : "border-neutral-300"}`}
                 placeholder="A modern, fully responsive SaaS landing page template built with..."
-                {...register('description')}
+                {...register("description")}
               />
-              {errors.description && <p className="text-sm text-error mt-1.5">{errors.description.message}</p>}
+              {errors.description && (
+                <p className="text-sm text-error mt-1.5">
+                  {errors.description.message}
+                </p>
+              )}
             </div>
 
             {/* Meta Description */}
@@ -726,7 +921,8 @@ export const TemplateUploadForm = () => {
                 <CharCounter current={metaDescValue.length} max={160} />
               </div>
               <p className="text-sm text-neutral-500 mb-3">
-                A brief summary for search results and social sharing (max 160 characters).
+                A brief summary for search results and social sharing (max 160
+                characters).
               </p>
               <textarea
                 rows={2}
@@ -734,11 +930,15 @@ export const TemplateUploadForm = () => {
                   placeholder:text-neutral-400
                   focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:outline-none
                   transition-colors duration-200 resize-none
-                  ${errors.metaDescription ? 'border-error' : 'border-neutral-300'}`}
+                  ${errors.metaDescription ? "border-error" : "border-neutral-300"}`}
                 placeholder="A clean SaaS landing page template with CMS integration and responsive design."
-                {...register('metaDescription')}
+                {...register("metaDescription")}
               />
-              {errors.metaDescription && <p className="text-sm text-error mt-1.5">{errors.metaDescription.message}</p>}
+              {errors.metaDescription && (
+                <p className="text-sm text-error mt-1.5">
+                  {errors.metaDescription.message}
+                </p>
+              )}
             </div>
 
             {/* Divider */}
@@ -758,26 +958,42 @@ export const TemplateUploadForm = () => {
                   onClick={() => handleFreeToggle(true)}
                   className={`flex flex-col items-center gap-2 p-5 rounded-xl border-2 transition-all duration-200 ${
                     isFree
-                      ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500/20'
-                      : 'border-neutral-200 bg-white hover:border-neutral-300'
+                      ? "border-primary-500 bg-primary-50 ring-2 ring-primary-500/20"
+                      : "border-neutral-200 bg-white hover:border-neutral-300"
                   }`}
                 >
-                  <Gift size={24} className={isFree ? 'text-primary-600' : 'text-neutral-400'} />
-                  <div className="font-semibold text-sm text-neutral-900">Free</div>
-                  <div className="text-xs text-neutral-500">No charge for buyers</div>
+                  <Gift
+                    size={24}
+                    className={isFree ? "text-primary-600" : "text-neutral-400"}
+                  />
+                  <div className="font-semibold text-sm text-neutral-900">
+                    Free
+                  </div>
+                  <div className="text-xs text-neutral-500">
+                    No charge for buyers
+                  </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleFreeToggle(false)}
                   className={`flex flex-col items-center gap-2 p-5 rounded-xl border-2 transition-all duration-200 ${
                     !isFree
-                      ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500/20'
-                      : 'border-neutral-200 bg-white hover:border-neutral-300'
+                      ? "border-primary-500 bg-primary-50 ring-2 ring-primary-500/20"
+                      : "border-neutral-200 bg-white hover:border-neutral-300"
                   }`}
                 >
-                  <DollarSign size={24} className={!isFree ? 'text-primary-600' : 'text-neutral-400'} />
-                  <div className="font-semibold text-sm text-neutral-900">Paid</div>
-                  <div className="text-xs text-neutral-500">Set your own price</div>
+                  <DollarSign
+                    size={24}
+                    className={
+                      !isFree ? "text-primary-600" : "text-neutral-400"
+                    }
+                  />
+                  <div className="font-semibold text-sm text-neutral-900">
+                    Paid
+                  </div>
+                  <div className="text-xs text-neutral-500">
+                    Set your own price
+                  </div>
                 </button>
               </div>
             </div>
@@ -794,7 +1010,7 @@ export const TemplateUploadForm = () => {
                   leftIcon={<DollarSign size={16} />}
                   error={errors.price?.message}
                   helperText="Set a competitive price. You'll earn 80% of each sale."
-                  {...register('price')}
+                  {...register("price")}
                 />
               </div>
             )}
@@ -806,16 +1022,20 @@ export const TemplateUploadForm = () => {
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {LICENSES.map((lic) => {
-                  const isSelected = watch('licenseType') === lic.value;
+                  const isSelected = watch("licenseType") === lic.value;
                   return (
                     <button
                       key={lic.value}
                       type="button"
-                      onClick={() => setValue('licenseType', lic.value, { shouldValidate: true })}
+                      onClick={() =>
+                        setValue("licenseType", lic.value, {
+                          shouldValidate: true,
+                        })
+                      }
                       className={`relative text-left p-4 rounded-xl border-2 transition-all duration-200 ${
                         isSelected
-                          ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500/20'
-                          : 'border-neutral-200 bg-white hover:border-neutral-300'
+                          ? "border-primary-500 bg-primary-50 ring-2 ring-primary-500/20"
+                          : "border-neutral-200 bg-white hover:border-neutral-300"
                       }`}
                     >
                       {isSelected && (
@@ -823,8 +1043,12 @@ export const TemplateUploadForm = () => {
                           <Check size={12} className="text-white" />
                         </div>
                       )}
-                      <div className="font-semibold text-sm text-neutral-900 mb-0.5">{lic.label}</div>
-                      <div className="text-xs text-neutral-500">{lic.description}</div>
+                      <div className="font-semibold text-sm text-neutral-900 mb-0.5">
+                        {lic.label}
+                      </div>
+                      <div className="text-xs text-neutral-500">
+                        {lic.description}
+                      </div>
                     </button>
                   );
                 })}
@@ -839,7 +1063,7 @@ export const TemplateUploadForm = () => {
               error={errors.demoUrl?.message}
               helperText="A live preview link so buyers can see the template in action (optional)."
               leftIcon={<Eye size={16} />}
-              {...register('demoUrl')}
+              {...register("demoUrl")}
             />
           </div>
         )}
@@ -849,15 +1073,15 @@ export const TemplateUploadForm = () => {
         {/* ============================================================ */}
         {currentStep === 2 && (
           <div className="space-y-8">
-
             {/* Thumbnail */}
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1.5">
                 Primary Thumbnail <span className="text-error">*</span>
               </label>
               <p className="text-sm text-neutral-500 mb-3">
-                This is the main image buyers will see in search results and listings.
-                Use a high-quality screenshot or mockup (recommended 1200 x 800px).
+                This is the main image buyers will see in search results and
+                listings. Use a high-quality screenshot or mockup (recommended
+                1200 x 800px).
               </p>
               <div
                 onDragEnter={handleThumbDrag}
@@ -866,10 +1090,10 @@ export const TemplateUploadForm = () => {
                 onDrop={handleThumbDrop}
                 className={`rounded-xl border-2 border-dashed transition-all duration-200 overflow-hidden ${
                   thumbDrag
-                    ? 'border-primary-500 bg-primary-50/50'
+                    ? "border-primary-500 bg-primary-50/50"
                     : thumbnailPreview
-                      ? 'border-transparent'
-                      : 'border-neutral-300 hover:border-neutral-400'
+                      ? "border-transparent"
+                      : "border-neutral-300 hover:border-neutral-400"
                 }`}
               >
                 {thumbnailPreview ? (
@@ -883,7 +1107,12 @@ export const TemplateUploadForm = () => {
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                       <label className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg text-sm font-medium cursor-pointer hover:bg-neutral-100 transition-colors">
                         <Upload size={16} /> Replace
-                        <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailInput} />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleThumbnailInput}
+                        />
                       </label>
                       <button
                         type="button"
@@ -910,7 +1139,12 @@ export const TemplateUploadForm = () => {
                     <p className="text-xs text-neutral-500">
                       PNG, JPG, or WebP — max 10 MB
                     </p>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailInput} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleThumbnailInput}
+                    />
                   </label>
                 )}
               </div>
@@ -922,18 +1156,28 @@ export const TemplateUploadForm = () => {
                 <label className="block text-sm font-medium text-neutral-700">
                   Gallery Images
                 </label>
-                <span className="text-xs text-neutral-400">{gallery.length}/5</span>
+                <span className="text-xs text-neutral-400">
+                  {gallery.length}/5
+                </span>
               </div>
               <p className="text-sm text-neutral-500 mb-3">
-                Add up to 5 additional screenshots to showcase different pages or sections.
-                Prefer actual page screenshots over composed mockups.
+                Add up to 5 additional screenshots to showcase different pages
+                or sections. Prefer actual page screenshots over composed
+                mockups.
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {galleryPreviews.map((src, i) => (
-                  <div key={i} className="relative group aspect-[16/10] rounded-xl overflow-hidden border border-neutral-200">
+                  <div
+                    key={i}
+                    className="relative group aspect-[16/10] rounded-xl overflow-hidden border border-neutral-200"
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt={`Gallery ${i + 1}`} className="w-full h-full object-cover" />
+                    <img
+                      src={src}
+                      alt={`Gallery ${i + 1}`}
+                      className="w-full h-full object-cover"
+                    />
                     <button
                       type="button"
                       onClick={() => removeGalleryImage(i)}
@@ -955,14 +1199,24 @@ export const TemplateUploadForm = () => {
                     onDrop={handleGalleryDrop}
                     className={`flex flex-col items-center justify-center aspect-[16/10] rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
                       galleryDrag
-                        ? 'border-primary-500 bg-primary-50/50'
-                        : 'border-neutral-300 hover:border-neutral-400 hover:bg-neutral-50'
+                        ? "border-primary-500 bg-primary-50/50"
+                        : "border-neutral-300 hover:border-neutral-400 hover:bg-neutral-50"
                     }`}
                   >
                     <ImageIcon size={20} className="text-neutral-400 mb-1" />
-                    <span className="text-xs text-neutral-500 font-medium">Add Image</span>
-                    <span className="text-[10px] text-neutral-400 mt-0.5">{5 - gallery.length} remaining</span>
-                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryInput} />
+                    <span className="text-xs text-neutral-500 font-medium">
+                      Add Image
+                    </span>
+                    <span className="text-[10px] text-neutral-400 mt-0.5">
+                      {5 - gallery.length} remaining
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleGalleryInput}
+                    />
                   </label>
                 )}
               </div>
@@ -977,77 +1231,117 @@ export const TemplateUploadForm = () => {
                 Template Delivery <span className="text-error">*</span>
               </label>
               <p className="text-sm text-neutral-500 mb-3">
-                Provide the file or link buyers will use to access your template after purchase.
+                Provide the file or link buyers will use to access your template
+                after purchase.
               </p>
 
               {/* Webflow */}
-              {selectedPlatform === 'webflow' && (
+              {selectedPlatform === "webflow" && (
                 <div className="space-y-3">
                   <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <Info size={16} className="text-blue-600 mt-0.5 shrink-0" />
                     <div className="text-sm text-blue-800">
                       <p className="font-semibold mb-1">Webflow Clone Link</p>
-                      <p>Buyers will use this link to clone your template into their Webflow account. Go to your project → Share → Copy cloneable link.</p>
+                      <p>
+                        Buyers will use this link to clone your template into
+                        their Webflow account. Go to your project → Share → Copy
+                        cloneable link.
+                      </p>
                     </div>
                   </div>
                   <div className="relative">
-                    <Link2 size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                    <Link2
+                      size={18}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+                    />
                     <input
                       type="url"
                       className={`w-full h-11 rounded-lg border bg-white text-neutral-900 pl-10 pr-4
                         focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:outline-none
                         transition-colors duration-200 placeholder:text-neutral-400
-                        ${errors.deliveryUrl ? 'border-error' : 'border-neutral-300'}`}
+                        ${errors.deliveryUrl ? "border-error" : "border-neutral-300"}`}
                       placeholder="https://webflow.com/made-in-webflow/website/your-template"
-                      {...register('deliveryUrl')}
+                      {...register("deliveryUrl")}
                     />
                   </div>
-                  {errors.deliveryUrl && <p className="text-sm text-error">{errors.deliveryUrl.message}</p>}
+                  {errors.deliveryUrl && (
+                    <p className="text-sm text-error">
+                      {errors.deliveryUrl.message}
+                    </p>
+                  )}
                 </div>
               )}
 
               {/* Framer */}
-              {selectedPlatform === 'framer' && (
+              {selectedPlatform === "framer" && (
                 <div className="space-y-3">
                   <div className="flex items-start gap-3 bg-purple-50 border border-purple-200 rounded-xl p-4">
-                    <Info size={16} className="text-purple-600 mt-0.5 shrink-0" />
+                    <Info
+                      size={16}
+                      className="text-purple-600 mt-0.5 shrink-0"
+                    />
                     <div className="text-sm text-purple-800">
                       <p className="font-semibold mb-1">Framer Remix Link</p>
-                      <p>Buyers will use this link to remix your template into their Framer workspace. Go to your project → Share → Copy remix link.</p>
+                      <p>
+                        Buyers will use this link to remix your template into
+                        their Framer workspace. Go to your project → Share →
+                        Copy remix link.
+                      </p>
                     </div>
                   </div>
                   <div className="relative">
-                    <Link2 size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                    <Link2
+                      size={18}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+                    />
                     <input
                       type="url"
                       className={`w-full h-11 rounded-lg border bg-white text-neutral-900 pl-10 pr-4
                         focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:outline-none
                         transition-colors duration-200 placeholder:text-neutral-400
-                        ${errors.deliveryUrl ? 'border-error' : 'border-neutral-300'}`}
+                        ${errors.deliveryUrl ? "border-error" : "border-neutral-300"}`}
                       placeholder="https://framer.com/projects/your-template--xxxx"
-                      {...register('deliveryUrl')}
+                      {...register("deliveryUrl")}
                     />
                   </div>
-                  {errors.deliveryUrl && <p className="text-sm text-error">{errors.deliveryUrl.message}</p>}
+                  {errors.deliveryUrl && (
+                    <p className="text-sm text-error">
+                      {errors.deliveryUrl.message}
+                    </p>
+                  )}
                 </div>
               )}
 
               {/* Wix */}
-              {selectedPlatform === 'wix' && (
+              {selectedPlatform === "wix" && (
                 <div className="space-y-3">
                   <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <Info size={16} className="text-amber-600 mt-0.5 shrink-0" />
+                    <Info
+                      size={16}
+                      className="text-amber-600 mt-0.5 shrink-0"
+                    />
                     <div className="text-sm text-amber-800">
                       <p className="font-semibold mb-1">Template File (.zip)</p>
-                      <p>Upload your Wix template as a .zip file. Buyers will download it after purchase and our team will assist with the transfer process.</p>
+                      <p>
+                        Upload your Wix template as a .zip file. Buyers will
+                        download it after purchase and our team will assist with
+                        the transfer process.
+                      </p>
                     </div>
                   </div>
                   {templateFile ? (
                     <div className="flex items-center gap-3 p-4 bg-neutral-50 border border-neutral-200 rounded-xl">
-                      <FileArchive size={22} className="text-primary-500 shrink-0" />
+                      <FileArchive
+                        size={22}
+                        className="text-primary-500 shrink-0"
+                      />
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-neutral-900 truncate">{templateFile.name}</div>
-                        <div className="text-xs text-neutral-500">{formatFileSize(templateFile.size)}</div>
+                        <div className="text-sm font-medium text-neutral-900 truncate">
+                          {templateFile.name}
+                        </div>
+                        <div className="text-xs text-neutral-500">
+                          {formatFileSize(templateFile.size)}
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -1061,10 +1355,19 @@ export const TemplateUploadForm = () => {
                     <label className="flex items-center gap-3 p-4 border-2 border-dashed border-neutral-300 rounded-xl cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition-all duration-200">
                       <Upload size={20} className="text-neutral-400" />
                       <div>
-                        <div className="text-sm font-medium text-neutral-700">Choose .zip file</div>
-                        <div className="text-xs text-neutral-500">Max 100 MB</div>
+                        <div className="text-sm font-medium text-neutral-700">
+                          Choose .zip file
+                        </div>
+                        <div className="text-xs text-neutral-500">
+                          Max 100 MB
+                        </div>
                       </div>
-                      <input type="file" accept=".zip" className="hidden" onChange={handleTemplateFileInput} />
+                      <input
+                        type="file"
+                        accept=".zip"
+                        className="hidden"
+                        onChange={handleTemplateFileInput}
+                      />
                     </label>
                   )}
                 </div>
@@ -1078,52 +1381,71 @@ export const TemplateUploadForm = () => {
         {/* ============================================================ */}
         {currentStep === 3 && (
           <div className="space-y-6">
-
             {/* Summary Card */}
             <div className="bg-neutral-50 rounded-2xl p-6 sm:p-8 space-y-6">
-              <h3 className="text-lg font-display font-bold text-neutral-900">Template Summary</h3>
+              <h3 className="text-lg font-display font-bold text-neutral-900">
+                Template Summary
+              </h3>
 
               {/* Thumbnail preview */}
               {thumbnailPreview && (
                 <div className="rounded-xl overflow-hidden border border-neutral-200">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={thumbnailPreview} alt="Thumbnail" className="w-full h-48 sm:h-56 object-cover" />
+                  <img
+                    src={thumbnailPreview}
+                    alt="Thumbnail"
+                    className="w-full h-48 sm:h-56 object-cover"
+                  />
                 </div>
               )}
 
               {/* Info grid */}
               <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                <SummaryField label="Template Name" value={getValues('title')} />
-                <SummaryField label="Platform" value={
-                  <span className="inline-flex items-center gap-1.5">
-                    <platformInfo.Icon size={14} className={accent.text} />
-                    {platformInfo.label}
-                  </span>
-                } />
+                <SummaryField
+                  label="Template Name"
+                  value={getValues("title")}
+                />
+                <SummaryField
+                  label="Platform"
+                  value={
+                    <span className="inline-flex items-center gap-1.5">
+                      <platformInfo.Icon size={14} className={accent.text} />
+                      {platformInfo.label}
+                    </span>
+                  }
+                />
                 <SummaryField
                   label="Category"
-                  value={categories.find(c => c._id === getValues('category'))?.name || '—'}
+                  value={
+                    categories.find((c) => c._id === getValues("category"))
+                      ?.name || "—"
+                  }
                 />
                 <SummaryField
                   label="Price"
-                  value={isFree ? 'Free' : `$${getValues('price')}`}
+                  value={isFree ? "Free" : `$${getValues("price")}`}
                 />
                 <SummaryField
                   label="License"
-                  value={LICENSES.find(l => l.value === getValues('licenseType'))?.label || '—'}
+                  value={
+                    LICENSES.find((l) => l.value === getValues("licenseType"))
+                      ?.label || "—"
+                  }
                 />
                 <SummaryField
                   label="Demo URL"
-                  value={getValues('demoUrl') || '—'}
+                  value={getValues("demoUrl") || "—"}
                   truncate
                 />
               </div>
 
               {/* Description preview */}
               <div>
-                <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Description</span>
+                <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                  Description
+                </span>
                 <p className="text-sm text-neutral-700 mt-1 line-clamp-4 whitespace-pre-line">
-                  {getValues('description')}
+                  {getValues("description")}
                 </p>
               </div>
 
@@ -1131,12 +1453,18 @@ export const TemplateUploadForm = () => {
               {galleryPreviews.length > 0 && (
                 <div>
                   <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2 block">
-                    Gallery ({galleryPreviews.length} image{galleryPreviews.length !== 1 ? 's' : ''})
+                    Gallery ({galleryPreviews.length} image
+                    {galleryPreviews.length !== 1 ? "s" : ""})
                   </span>
                   <div className="flex gap-2 overflow-x-auto pb-1">
                     {galleryPreviews.map((src, i) => (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img key={i} src={src} alt={`Gallery ${i + 1}`} className="w-24 h-16 object-cover rounded-lg border border-neutral-200 shrink-0" />
+                      <img
+                        key={i}
+                        src={src}
+                        alt={`Gallery ${i + 1}`}
+                        className="w-24 h-16 object-cover rounded-lg border border-neutral-200 shrink-0"
+                      />
                     ))}
                   </div>
                 </div>
@@ -1144,19 +1472,23 @@ export const TemplateUploadForm = () => {
 
               {/* Delivery info */}
               <div>
-                <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Delivery</span>
+                <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                  Delivery
+                </span>
                 <p className="text-sm text-neutral-700 mt-1">
-                  {selectedPlatform === 'wix'
-                    ? templateFile ? `File: ${templateFile.name} (${formatFileSize(templateFile.size)})` : '—'
-                    : getValues('deliveryUrl') || '—'
-                  }
+                  {selectedPlatform === "wix"
+                    ? templateFile
+                      ? `File: ${templateFile.name} (${formatFileSize(templateFile.size)})`
+                      : "—"
+                    : getValues("deliveryUrl") || "—"}
                 </p>
               </div>
             </div>
 
             {/* Edit hint */}
             <p className="text-sm text-neutral-500 text-center">
-              Need to make changes? Click on a previous step above to go back and edit.
+              Need to make changes? Click on a previous step above to go back
+              and edit.
             </p>
 
             {/* Compliance */}
@@ -1169,14 +1501,26 @@ export const TemplateUploadForm = () => {
                   className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500"
                 />
                 <span className="text-sm text-neutral-700 leading-relaxed">
-                  I confirm this template is my original work and complies with the{' '}
-                  <a href="/creator-guidelines" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-medium">
+                  I confirm this template is my original work and complies with
+                  the{" "}
+                  <a
+                    href="/creator-guidelines"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary-600 hover:underline font-medium"
+                  >
                     Creator Guidelines
-                  </a>{' '}
-                  and{' '}
-                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-medium">
+                  </a>{" "}
+                  and{" "}
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary-600 hover:underline font-medium"
+                  >
                     Terms of Service
-                  </a>.
+                  </a>
+                  .
                 </span>
               </label>
             </div>
@@ -1187,9 +1531,11 @@ export const TemplateUploadForm = () => {
               <div className="text-sm text-primary-800">
                 <p className="font-semibold mb-1">What happens next?</p>
                 <p>
-                  After submitting for review, our team will review your template within 3–5 business days.
-                  You&apos;ll receive an email notification when your template is approved or if changes are needed.
-                  Saving as a draft lets you come back and edit before submitting.
+                  After submitting for review, our team will review your
+                  template within 3–5 business days. You&apos;ll receive an
+                  email notification when your template is approved or if
+                  changes are needed. Saving as a draft lets you come back and
+                  edit before submitting.
                 </p>
               </div>
             </div>
@@ -1229,7 +1575,7 @@ export const TemplateUploadForm = () => {
                 disabled={submitting}
                 onClick={handleSubmit((v) => onSubmit(v, false))}
               >
-                {submitting ? 'Saving...' : 'Save as Draft'}
+                {submitting ? "Saving..." : "Save as Draft"}
               </Button>
               <Button
                 type="button"
@@ -1252,12 +1598,24 @@ export const TemplateUploadForm = () => {
 /*  Summary field (used in Review step)                                */
 /* ------------------------------------------------------------------ */
 
-function SummaryField({ label, value, truncate }: { label: string; value: React.ReactNode; truncate?: boolean }) {
+function SummaryField({
+  label,
+  value,
+  truncate,
+}: {
+  label: string;
+  value: React.ReactNode;
+  truncate?: boolean;
+}) {
   return (
     <div className="min-w-0">
-      <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{label}</span>
-      <div className={`text-sm font-medium text-neutral-900 mt-0.5 ${truncate ? 'truncate' : ''}`}>
-        {value || '—'}
+      <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+        {label}
+      </span>
+      <div
+        className={`text-sm font-medium text-neutral-900 mt-0.5 ${truncate ? "truncate" : ""}`}
+      >
+        {value || "—"}
       </div>
     </div>
   );

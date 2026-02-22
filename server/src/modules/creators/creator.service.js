@@ -7,23 +7,90 @@ import { escapeRegex } from '../../lib/utils.js';
 
 export class CreatorService {
   /**
+   * List verified creators (public directory).
+   */
+  async getAll({ page = 1, limit = 24, q, sort = 'popular' } = {}) {
+    const skip = (page - 1) * limit;
+    const filter = { isVerified: true };
+
+    if (q) {
+      const safeQ = escapeRegex(q);
+      filter.$or = [
+        { displayName: { $regex: safeQ, $options: 'i' } },
+        { username: { $regex: safeQ, $options: 'i' } },
+      ];
+    }
+
+    let sortOption = { 'stats.totalSales': -1 };
+    if (sort === 'newest') sortOption = { createdAt: -1 };
+    if (sort === 'templates') sortOption = { 'stats.templateCount': -1 };
+
+    const [creators, total] = await Promise.all([
+      CreatorProfile.find(filter)
+        .select('displayName username bio stats isFeatured isOfficial createdAt')
+        .populate('userId', 'name avatar')
+        .sort(sortOption)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      CreatorProfile.countDocuments(filter),
+    ]);
+
+    return {
+      creators,
+      pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / limit) },
+    };
+  }
+
+  /**
    * Get public creator profile by username or userId
    */
   async getPublicProfile(identifier) {
+    const publicSelect = [
+      'userId',
+      'displayName',
+      'username',
+      'bio',
+      'website',
+      'twitter',
+      'dribbble',
+      'github',
+      'portfolio',
+      'coverImage',
+      'stats',
+      'isFeatured',
+      'isVerified',
+      'isOfficial',
+      'createdAt',
+      'updatedAt',
+    ].join(' ');
+
     // Try by username first, then by userId
     let profile = await CreatorProfile.findOne({ username: identifier })
-      .populate('userId', 'name email avatar createdAt');
+      .select(publicSelect)
+      .populate('userId', 'name avatar createdAt')
+      .lean();
 
     if (!profile) {
       profile = await CreatorProfile.findOne({ userId: identifier })
-        .populate('userId', 'name email avatar createdAt');
+        .select(publicSelect)
+        .populate('userId', 'name avatar createdAt')
+        .lean();
     }
 
     if (!profile) {
       throw new AppError('Creator not found', 404);
     }
 
-    return profile;
+    return {
+      ...profile,
+      userId: profile.userId ? {
+        _id: profile.userId._id,
+        name: profile.userId.name,
+        avatar: profile.userId.avatar,
+        createdAt: profile.userId.createdAt,
+      } : null,
+    };
   }
 
   /**

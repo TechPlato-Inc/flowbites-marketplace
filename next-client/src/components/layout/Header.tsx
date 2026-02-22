@@ -1,17 +1,27 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
-import { Button, Logo, Badge } from '@/design-system';
-import { Search, Menu, X, ChevronDown, LogOut, LayoutDashboard, Settings } from 'lucide-react';
-import { SearchOverlay } from './SearchOverlay';
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores/authStore";
+import { Button, Logo, Badge } from "@/design-system";
+import {
+  Search,
+  Menu,
+  X,
+  ChevronDown,
+  LogOut,
+  LayoutDashboard,
+  Settings,
+} from "lucide-react";
+import { SearchOverlay } from "./SearchOverlay";
+import { CartDrawer } from "@/components/cart/CartDrawer";
+import { NotificationBell } from "@/modules/notifications/components/NotificationBell";
 
 const NAV_LINKS = [
-  { href: '/templates', label: 'Templates' },
-  { href: '/services', label: 'Services' },
-  { href: '/ui-shorts', label: 'UI Shorts' },
+  { href: "/templates", label: "Templates" },
+  { href: "/services", label: "Services" },
+  { href: "/ui-shorts", label: "UI Shorts" },
 ];
 
 export function Header() {
@@ -35,40 +45,43 @@ export function Header() {
   // Close user menu on click outside
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      ) {
         setUserMenuOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   // Keyboard shortcut: Cmd/Ctrl+K for search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setSearchOpen((prev) => !prev);
       }
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         setSearchOpen(false);
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const handleLogout = async () => {
     setUserMenuOpen(false);
     await logout();
-    router.push('/');
+    router.push("/");
   };
 
   const getDashboardPath = () => {
-    if (!user) return '/';
-    if (user.role === 'admin') return '/dashboard/admin';
-    if (user.role === 'creator') return '/dashboard/creator';
-    return '/dashboard/buyer';
+    if (!user) return "/";
+    if (user.role === "admin") return "/dashboard/admin";
+    if (user.role === "creator") return "/dashboard/creator";
+    return "/dashboard/buyer";
   };
 
   const isActive = (path: string) => pathname.startsWith(path);
@@ -90,8 +103,8 @@ export function Header() {
                     href={link.href}
                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive(link.href)
-                        ? 'text-primary-600 bg-primary-50'
-                        : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                        ? "text-primary-600 bg-primary-50"
+                        : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
                     }`}
                   >
                     {link.label}
@@ -126,6 +139,12 @@ export function Header() {
                 <Search size={20} />
               </Button>
 
+              {/* Cart */}
+              <CartDrawer />
+
+              {/* Notifications */}
+              {isAuthenticated && <NotificationBell />}
+
               {isAuthenticated && user ? (
                 <div className="relative" ref={userMenuRef}>
                   <button
@@ -142,7 +161,7 @@ export function Header() {
                     </span>
                     <ChevronDown
                       size={14}
-                      className={`hidden md:block text-neutral-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}
+                      className={`hidden md:block text-neutral-400 transition-transform ${userMenuOpen ? "rotate-180" : ""}`}
                     />
                   </button>
 
@@ -150,9 +169,15 @@ export function Header() {
                   {userMenuOpen && (
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-neutral-200 py-1 z-50">
                       <div className="px-4 py-3 border-b border-neutral-100">
-                        <p className="text-sm font-medium text-neutral-900">{user.name}</p>
+                        <p className="text-sm font-medium text-neutral-900">
+                          {user.name}
+                        </p>
                         <p className="text-xs text-neutral-500">{user.email}</p>
-                        <Badge variant="info" size="sm" className="mt-1 capitalize">
+                        <Badge
+                          variant="info"
+                          size="sm"
+                          className="mt-1 capitalize"
+                        >
                           {user.role}
                         </Badge>
                       </div>
@@ -225,8 +250,8 @@ export function Header() {
                   href={link.href}
                   className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     isActive(link.href)
-                      ? 'text-primary-600 bg-primary-50'
-                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                      ? "text-primary-600 bg-primary-50"
+                      : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
                   }`}
                 >
                   {link.label}

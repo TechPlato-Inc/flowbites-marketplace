@@ -1,36 +1,35 @@
-import type { Metadata } from 'next';
-import { BookOpen } from 'lucide-react';
-import { generateSEO } from '@/lib/utils/seo';
-import { blogPosts } from '@/modules/blog/data/blogPosts';
-import { BlogListClient } from '@/modules/blog/components/BlogListClient';
-
-/* ------------------------------------------------------------------ */
-/*  Static Generation                                                  */
-/* ------------------------------------------------------------------ */
-export const dynamic = 'force-static';
+import type { Metadata } from "next";
+import { BookOpen } from "lucide-react";
+import { generateSEO } from "@/lib/utils/seo";
+import { getBlogPosts } from "@/modules/blog/services/blog.service.server";
+import { BlogListClient } from "@/modules/blog/components/BlogListClient";
 
 /* ------------------------------------------------------------------ */
 /*  Metadata                                                           */
 /* ------------------------------------------------------------------ */
 export function generateMetadata(): Metadata {
   return generateSEO({
-    title: 'Blog',
+    title: "Blog",
     description:
-      'Read articles about web design, Webflow, Framer, and building with no-code tools on the Flowbites blog.',
-    canonical: '/blog',
+      "Read articles about web design, Webflow, Framer, and building with no-code tools on the Flowbites blog.",
+    canonical: "/blog",
   });
 }
 
 /* ------------------------------------------------------------------ */
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
-export default function BlogPage() {
-  // Sort posts by date descending (newest first)
-  const sortedPosts = [...blogPosts].sort(
-    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-  );
+export default async function BlogPage() {
+  let posts: Awaited<ReturnType<typeof getBlogPosts>>["posts"] = [];
 
-  const featuredPost = sortedPosts[0];
+  try {
+    const data = await getBlogPosts({ limit: "100", sort: "newest" });
+    posts = data.posts;
+  } catch {
+    // API unavailable — show empty state
+  }
+
+  const featuredPost = posts.find((p) => p.isFeatured) || posts[0];
 
   return (
     <div className="min-h-screen">
@@ -47,14 +46,14 @@ export default function BlogPage() {
             web designers and creators
           </h1>
           <p className="text-neutral-400 max-w-xl">
-            Learn about Webflow, Framer, Wix, web design trends, and how to build better websites
-            with premium templates.
+            Learn about Webflow, Framer, Wix, web design trends, and how to
+            build better websites with premium templates.
           </p>
         </div>
       </div>
 
       {/* Interactive list — client component */}
-      <BlogListClient posts={sortedPosts} featuredPost={featuredPost} />
+      <BlogListClient posts={posts} featuredPost={featuredPost} />
     </div>
   );
 }

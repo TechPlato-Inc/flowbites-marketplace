@@ -29,6 +29,8 @@ services:
       timeout: 10s
       retries: 5
       start_period: 20s
+    mem_limit: 1g
+    cpus: 1.0
 
   # ---------------------------------------------------------------------------
   # Express API Server (port 5000)
@@ -63,6 +65,14 @@ services:
       - uploads_data:/app/uploads
     networks:
       - flowbites-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    mem_limit: 512m
+    cpus: 1.0
 
   # ---------------------------------------------------------------------------
   # Next.js SSR Client (port 3000)
@@ -79,7 +89,8 @@ services:
     container_name: flowbites-client
     restart: unless-stopped
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       API_INTERNAL_URL: http://api:5000/api
@@ -88,6 +99,14 @@ services:
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://flowbites.com}
     networks:
       - flowbites-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    mem_limit: 512m
+    cpus: 1.0
 
   # ---------------------------------------------------------------------------
   # Nginx Reverse Proxy + SSL Termination
@@ -97,8 +116,10 @@ services:
     container_name: flowbites-nginx
     restart: unless-stopped
     depends_on:
-      - api
-      - client
+      api:
+        condition: service_healthy
+      client:
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
@@ -108,6 +129,14 @@ services:
       - certbot_certs:/etc/letsencrypt:ro
     networks:
       - flowbites-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    mem_limit: 256m
+    cpus: 0.5
 
   # ---------------------------------------------------------------------------
   # Certbot - Automatic Let's Encrypt SSL
@@ -119,6 +148,9 @@ services:
       - certbot_webroot:/var/www/certbot
       - certbot_certs:/etc/letsencrypt
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    restart: unless-stopped
+    networks:
+      - flowbites-network
 
 # ---------------------------------------------------------------------------
 # Volumes

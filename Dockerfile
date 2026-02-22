@@ -40,6 +40,7 @@ FROM node:20-alpine AS api
 RUN addgroup -S flowbites && adduser -S flowbites -G flowbites
 
 WORKDIR /app
+ENV NODE_ENV=production
 
 # Copy server package files and install production dependencies only
 COPY server/package.json server/package-lock.json ./

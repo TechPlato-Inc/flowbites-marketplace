@@ -84,6 +84,8 @@ blogPostSchema.index({ tags: 1 });
 blogPostSchema.index({ publishedAt: -1 });
 blogPostSchema.index({ 'stats.views': -1 });
 blogPostSchema.index({ status: 1, publishedAt: -1 });
+blogPostSchema.index({ status: 1, isFeatured: 1, publishedAt: -1 });
+blogPostSchema.index({ status: 1, createdAt: -1 });
 
 // Auto-generate slug from title
 blogPostSchema.pre('validate', function(next) {

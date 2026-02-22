@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['buyer', 'creator', 'admin'],
+    enum: ['buyer', 'creator', 'admin', 'super_admin'],
     default: 'buyer'
   },
   avatar: {
@@ -39,9 +39,26 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  isBanned: {
+    type: Boolean,
+    default: false
+  },
+  bannedAt: Date,
+  bannedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  banReason: String,
   emailVerified: {
     type: Boolean,
     default: false
+  },
+  emailPreferences: {
+    orderConfirmations: { type: Boolean, default: true },
+    reviewNotifications: { type: Boolean, default: true },
+    promotionalEmails: { type: Boolean, default: false },
+    weeklyDigest: { type: Boolean, default: false },
+    newFollowerAlert: { type: Boolean, default: true }
   },
   refreshTokens: [{
     token: String,
@@ -53,7 +70,9 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes
+userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
+userSchema.index({ isActive: 1, isBanned: 1 });
 userSchema.index({ createdAt: -1 });
 
 // Hash password before saving

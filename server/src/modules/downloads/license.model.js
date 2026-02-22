@@ -82,6 +82,7 @@ const downloadTokenSchema = new mongoose.Schema({
 // Indexes
 licenseSchema.index({ buyerId: 1, templateId: 1 });
 licenseSchema.index({ orderId: 1 });
+licenseSchema.index({ buyerId: 1, isActive: 1, createdAt: -1 });
 
 downloadTokenSchema.index({ expiresAt: 1 });
 downloadTokenSchema.index({ used: 1, expiresAt: 1 });

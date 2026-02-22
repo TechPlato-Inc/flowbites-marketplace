@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { api, getUploadUrl } from '@/lib/api/client';
-import { Button, Badge, Input } from '@/design-system';
-import { TemplateCard } from '@/modules/templates/components/TemplateCard';
-import { HeroShowcase } from './HeroShowcase';
-import { useScrollReveal } from '@/hooks/useAnimations';
-import { PLATFORM_BADGE_COLORS } from '@/lib/constants';
-import type { Template, Category, ServicePackage } from '@/types';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { api, getUploadUrl } from "@/lib/api/client";
+import { Button, Badge, Input } from "@/design-system";
+import { TemplateCard } from "@/modules/templates/components/TemplateCard";
+import { HeroShowcase } from "./HeroShowcase";
+import { useScrollReveal } from "@/hooks/useAnimations";
+import { PLATFORM_BADGE_COLORS } from "@/lib/constants";
+import type { Template, Category, ServicePackage } from "@/types";
 
 import {
   ArrowRight,
@@ -30,33 +30,33 @@ import {
   Layers,
   Briefcase,
   Monitor,
-} from 'lucide-react';
+} from "lucide-react";
 
 /* ===== Reveal wrapper ===== */
 const Reveal = ({
   children,
-  className = '',
-  direction = 'up',
+  className = "",
+  direction = "up",
   delay = 0,
 }: {
   children: React.ReactNode;
   className?: string;
-  direction?: 'up' | 'left' | 'right' | 'scale';
+  direction?: "up" | "left" | "right" | "scale";
   delay?: number;
 }) => {
   const { ref, isVisible } = useScrollReveal();
   const dirClass =
-    direction === 'left'
-      ? 'reveal-left'
-      : direction === 'right'
-        ? 'reveal-right'
-        : direction === 'scale'
-          ? 'reveal-scale'
-          : 'reveal';
+    direction === "left"
+      ? "reveal-left"
+      : direction === "right"
+        ? "reveal-right"
+        : direction === "scale"
+          ? "reveal-scale"
+          : "reveal";
   return (
     <div
       ref={ref}
-      className={`${dirClass} ${isVisible ? 'visible' : ''} ${className}`}
+      className={`${dirClass} ${isVisible ? "visible" : ""} ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
@@ -69,12 +69,12 @@ const CATEGORY_ICONS: Record<string, typeof Palette> = {
   default: Palette,
   design: Palette,
   landing: Layout,
-  'landing-page': Layout,
+  "landing-page": Layout,
   development: Code,
   business: Briefcase,
   portfolio: Monitor,
   ecommerce: ShoppingCart,
-  'e-commerce': ShoppingCart,
+  "e-commerce": ShoppingCart,
   blog: Layers,
   agency: Globe,
   saas: Globe,
@@ -90,7 +90,10 @@ const formatNumber = (num: number): string => {
 const TemplateGridSkeleton = ({ count }: { count: number }) => (
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
     {[...Array(count)].map((_, i) => (
-      <div key={i} className="border border-neutral-200 rounded-xl overflow-hidden bg-white">
+      <div
+        key={i}
+        className="border border-neutral-200 rounded-xl overflow-hidden bg-white"
+      >
         <div className="aspect-[16/10] bg-neutral-200 animate-pulse" />
         <div className="p-4 space-y-3">
           <div className="h-4 bg-neutral-200 rounded animate-pulse w-3/4" />
@@ -111,7 +114,10 @@ interface HomeContentProps {
   initialCategories: Category[];
 }
 
-export function HomeContent({ initialFeatured, initialCategories }: HomeContentProps) {
+export function HomeContent({
+  initialFeatured,
+  initialCategories,
+}: HomeContentProps) {
   const router = useRouter();
   const [featuredTemplates] = useState<Template[]>(initialFeatured);
   const [newestTemplates, setNewestTemplates] = useState<Template[]>([]);
@@ -119,9 +125,9 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
   const [categories] = useState<Category[]>(initialCategories);
   const [services, setServices] = useState<ServicePackage[]>([]);
   const [newestLoading, setNewestLoading] = useState(true);
-  const [activePlatform, setActivePlatform] = useState('');
-  const [activeCategory, setActiveCategory] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activePlatform, setActivePlatform] = useState("");
+  const [activeCategory, setActiveCategory] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchBestSellers();
@@ -135,13 +141,17 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
   const fetchNewest = async () => {
     setNewestLoading(true);
     try {
-      const params: Record<string, string> = { limit: '8', sort: 'newest' };
+      const params: Record<string, string> = {
+        limit: "8",
+        sort: "newest",
+        madeBy: "flowbites",
+      };
       if (activePlatform) params.platform = activePlatform;
       if (activeCategory) params.category = activeCategory;
-      const { data } = await api.get('/templates', { params });
-      setNewestTemplates(data.data.templates);
+      const { data } = await api.get("/templates", { params });
+      setNewestTemplates(data.data?.templates || []);
     } catch (error) {
-      console.error('Failed to fetch newest templates:', error);
+      console.error("Failed to fetch newest templates:", error);
     } finally {
       setNewestLoading(false);
     }
@@ -149,19 +159,23 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
 
   const fetchBestSellers = async () => {
     try {
-      const { data } = await api.get('/templates?limit=8&sort=popular&featured=true');
-      setBestSellers(data.data.templates);
+      const { data } = await api.get(
+        "/templates?limit=8&sort=popular&featured=true",
+      );
+      setBestSellers(data.data?.templates || []);
     } catch (error) {
-      console.error('Failed to fetch best sellers:', error);
+      console.error("Failed to fetch best sellers:", error);
     }
   };
 
   const fetchServices = async () => {
     try {
-      const { data } = await api.get('/services/packages/browse', { params: { limit: 3 } });
-      setServices(data.data.packages);
+      const { data } = await api.get("/services/packages/browse", {
+        params: { limit: 3 },
+      });
+      setServices(data.data?.packages || []);
     } catch (error) {
-      console.error('Failed to fetch services:', error);
+      console.error("Failed to fetch services:", error);
     }
   };
 
@@ -181,8 +195,9 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
         <div
           className="absolute inset-0 opacity-[0.03]"
           style={{
-            backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
+            backgroundImage:
+              "radial-gradient(circle, #000 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
           }}
         />
         <div className="absolute top-20 left-[10%] w-16 h-16 rounded-2xl bg-primary-200/30 blur-sm float hidden lg:block" />
@@ -199,8 +214,12 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
               </div>
 
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-neutral-900 leading-[1.1] mb-4 sm:mb-6">
-                <span className="hero-line hero-line-2 block">Premium Website Templates</span>
-                <span className="hero-line hero-line-3 block">for any project</span>
+                <span className="hero-line hero-line-2 block">
+                  Premium Website Templates
+                </span>
+                <span className="hero-line hero-line-3 block">
+                  for any project
+                </span>
               </h1>
 
               <p className="hero-line hero-line-3 text-base sm:text-lg lg:text-xl text-neutral-600 mb-6 sm:mb-8 leading-relaxed">
@@ -230,19 +249,26 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
 
                 {/* Popular Tags */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-neutral-500 mr-1">Popular:</span>
-                  {['Webflow', 'Framer', 'Wix', 'Landing Page', 'Portfolio', 'eCommerce'].map(
-                    (tag, i) => (
-                      <Link
-                        key={tag}
-                        href={`/templates?q=${encodeURIComponent(tag)}`}
-                        className="px-3 py-1.5 rounded-full bg-white border border-neutral-200 text-sm text-neutral-600 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
-                        style={{ animationDelay: `${0.6 + i * 0.05}s` }}
-                      >
-                        {tag}
-                      </Link>
-                    )
-                  )}
+                  <span className="text-sm text-neutral-500 mr-1">
+                    Popular:
+                  </span>
+                  {[
+                    "Webflow",
+                    "Framer",
+                    "Wix",
+                    "Landing Page",
+                    "Portfolio",
+                    "eCommerce",
+                  ].map((tag, i) => (
+                    <Link
+                      key={tag}
+                      href={`/templates?q=${encodeURIComponent(tag)}`}
+                      className="px-3 py-1.5 rounded-full bg-white border border-neutral-200 text-sm text-neutral-600 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
+                      style={{ animationDelay: `${0.6 + i * 0.05}s` }}
+                    >
+                      {tag}
+                    </Link>
+                  ))}
                 </div>
               </div>
             </div>
@@ -266,10 +292,16 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                 <h2 className="text-3xl font-display font-bold text-neutral-900 mb-2">
                   Browse by Category
                 </h2>
-                <p className="text-neutral-600">Find the perfect template for your next project</p>
+                <p className="text-neutral-600">
+                  Find the perfect template for your next project
+                </p>
               </div>
               <Link href="/templates">
-                <Button variant="outline" size="sm" rightIcon={<ArrowRight size={16} />}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  rightIcon={<ArrowRight size={16} />}
+                >
                   All Categories
                 </Button>
               </Link>
@@ -279,7 +311,8 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {categories.length > 0
               ? categories.slice(0, 6).map((category, catIdx) => {
-                  const IconComponent = CATEGORY_ICONS[category.slug] || CATEGORY_ICONS.default;
+                  const IconComponent =
+                    CATEGORY_ICONS[category.slug] || CATEGORY_ICONS.default;
                   return (
                     <Reveal key={category._id} delay={catIdx * 80}>
                       <Link
@@ -307,13 +340,17 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                                     {category.templateCount} templates
                                   </span>
                                 )}
-                                <span className="text-neutral-300">&middot;</span>
+                                <span className="text-neutral-300">
+                                  &middot;
+                                </span>
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    router.push(`/templates?category=${category.slug}&sort=newest`);
+                                    router.push(
+                                      `/templates?category=${category.slug}&sort=newest`,
+                                    );
                                   }}
                                   className="text-primary-600 hover:text-primary-700 font-medium hover:underline"
                                 >
@@ -324,7 +361,9 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    router.push(`/templates?category=${category.slug}&sort=popular`);
+                                    router.push(
+                                      `/templates?category=${category.slug}&sort=popular`,
+                                    );
                                   }}
                                   className="text-primary-600 hover:text-primary-700 font-medium hover:underline"
                                 >
@@ -339,7 +378,10 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                   );
                 })
               : [...Array(6)].map((_, i) => (
-                  <div key={i} className="border border-neutral-200 rounded-xl p-6">
+                  <div
+                    key={i}
+                    className="border border-neutral-200 rounded-xl p-6"
+                  >
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 rounded-lg bg-neutral-200 animate-pulse shrink-0" />
                       <div className="flex-1 space-y-3">
@@ -396,18 +438,18 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
             {[
               {
                 icon: Award,
-                title: 'Home of premium quality',
-                desc: 'Every template is reviewed by our team before going live on the marketplace.',
+                title: "Home of premium quality",
+                desc: "Every template is reviewed by our team before going live on the marketplace.",
               },
               {
                 icon: Headphones,
-                title: 'Dedicated creator support',
-                desc: 'Get help directly from template creators with clear documentation included.',
+                title: "Dedicated creator support",
+                desc: "Get help directly from template creators with clear documentation included.",
               },
               {
                 icon: ShieldCheck,
-                title: 'Quality reviewed & secure',
-                desc: 'All items go through quality review ensuring clean code and great design.',
+                title: "Quality reviewed & secure",
+                desc: "All items go through quality review ensuring clean code and great design.",
               },
             ].map((item, i) => (
               <Reveal key={item.title} delay={i * 150}>
@@ -416,8 +458,12 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                     <item.icon size={24} />
                   </div>
                   <div>
-                    <h3 className="font-display font-bold text-neutral-900 mb-1">{item.title}</h3>
-                    <p className="text-neutral-500 text-sm leading-relaxed">{item.desc}</p>
+                    <h3 className="font-display font-bold text-neutral-900 mb-1">
+                      {item.title}
+                    </h3>
+                    <p className="text-neutral-500 text-sm leading-relaxed">
+                      {item.desc}
+                    </p>
                   </div>
                 </div>
               </Reveal>
@@ -435,8 +481,8 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                 Check out our newest templates
               </h2>
               <p className="text-neutral-600">
-                We carefully review new entries from our community one by one to
-                make sure they meet high-quality design and functionality standards.
+                Fresh designs from Flowbites — premium templates crafted by our
+                expert team to help you launch faster.
               </p>
             </div>
           </Reveal>
@@ -444,10 +490,10 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
           {/* Tab Navigation */}
           <div className="flex flex-wrap gap-2 mb-8 pb-4 border-b border-neutral-200">
             {[
-              { key: '', label: 'All categories' },
-              { key: 'webflow', label: 'Webflow' },
-              { key: 'framer', label: 'Framer' },
-              { key: 'wix', label: 'Wix' },
+              { key: "", label: "All categories" },
+              { key: "webflow", label: "Webflow" },
+              { key: "framer", label: "Framer" },
+              { key: "wix", label: "Wix" },
             ].map((tab) => (
               <Button
                 key={tab.key}
@@ -455,12 +501,12 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                 size="sm"
                 onClick={() => {
                   setActivePlatform(tab.key);
-                  setActiveCategory('');
+                  setActiveCategory("");
                 }}
                 className={`!rounded-full whitespace-nowrap ${
                   activePlatform === tab.key && !activeCategory
-                    ? '!bg-primary-500 !text-white shadow-sm'
-                    : '!bg-neutral-100 !text-neutral-600 hover:!bg-neutral-200 hover:!text-neutral-800'
+                    ? "!bg-primary-500 !text-white shadow-sm"
+                    : "!bg-neutral-100 !text-neutral-600 hover:!bg-neutral-200 hover:!text-neutral-800"
                 }`}
               >
                 {tab.label}
@@ -474,12 +520,12 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                 size="sm"
                 onClick={() => {
                   setActiveCategory(cat.slug);
-                  setActivePlatform('');
+                  setActivePlatform("");
                 }}
                 className={`!rounded-full whitespace-nowrap ${
                   activeCategory === cat.slug
-                    ? '!bg-primary-500 !text-white shadow-sm'
-                    : '!bg-neutral-100 !text-neutral-600 hover:!bg-neutral-200 hover:!text-neutral-800'
+                    ? "!bg-primary-500 !text-white shadow-sm"
+                    : "!bg-neutral-100 !text-neutral-600 hover:!bg-neutral-200 hover:!text-neutral-800"
                 }`}
               >
                 {cat.name}
@@ -497,7 +543,9 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
             </div>
           ) : (
             <div className="text-center py-16">
-              <p className="text-neutral-500">No templates found for this filter.</p>
+              <p className="text-neutral-500">
+                No templates found for this filter.
+              </p>
             </div>
           )}
 
@@ -518,7 +566,10 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
 
         <div className="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
-            <Reveal direction="left" className="flex-1 text-center lg:text-left">
+            <Reveal
+              direction="left"
+              className="flex-1 text-center lg:text-left"
+            >
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-white mb-4">
                 Need a custom build? Hire our creators.
               </h2>
@@ -528,15 +579,17 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
               </p>
 
               <div className="flex flex-wrap gap-3 mb-8 justify-center lg:justify-start">
-                {['Custom Design', 'Full Development', 'Migration Support'].map((f) => (
-                  <span
-                    key={f}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 text-white text-sm border border-white/20"
-                  >
-                    <ShieldCheck size={14} />
-                    {f}
-                  </span>
-                ))}
+                {["Custom Design", "Full Development", "Migration Support"].map(
+                  (f) => (
+                    <span
+                      key={f}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 text-white text-sm border border-white/20"
+                    >
+                      <ShieldCheck size={14} />
+                      {f}
+                    </span>
+                  ),
+                )}
               </div>
 
               <Link href="/services">
@@ -564,9 +617,12 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                         <Briefcase size={20} className="text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-white font-semibold text-sm truncate">{service.name}</p>
+                        <p className="text-white font-semibold text-sm truncate">
+                          {service.name}
+                        </p>
                         <p className="text-white/60 text-xs">
-                          {service.deliveryDays} day delivery &middot; {service.revisions} revisions
+                          {service.deliveryDays} day delivery &middot;{" "}
+                          {service.revisions} revisions
                         </p>
                       </div>
                       <span className="text-white font-bold text-sm shrink-0">
@@ -591,7 +647,8 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                   Featured Creator
                 </h2>
                 <p className="text-neutral-600">
-                  Our templates are produced by world-class creators. Explore the best of the week.
+                  Our templates are produced by world-class creators. Explore
+                  the best of the week.
                 </p>
               </div>
             </Reveal>
@@ -620,7 +677,10 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                       </Badge>
                       {spotlightCreator.stats?.averageRating > 0 && (
                         <div className="flex items-center gap-1 text-sm">
-                          <Star size={14} className="fill-warning text-warning" />
+                          <Star
+                            size={14}
+                            className="fill-warning text-warning"
+                          />
                           <span className="text-neutral-600 font-medium">
                             {spotlightCreator.stats.averageRating.toFixed(1)}
                           </span>
@@ -628,8 +688,15 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                       )}
                     </div>
                   </div>
-                  <Link href={`/creators/${spotlightCreator.username}`} className="shrink-0">
-                    <Button variant="outline" size="sm" rightIcon={<ArrowRight size={14} />}>
+                  <Link
+                    href={`/creators/${spotlightCreator.username}`}
+                    className="shrink-0"
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      rightIcon={<ArrowRight size={14} />}
+                    >
                       View Portfolio
                     </Button>
                   </Link>
@@ -657,10 +724,16 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                 <h2 className="text-3xl font-display font-bold text-neutral-900 mb-2">
                   Best Selling Templates
                 </h2>
-                <p className="text-neutral-600">The most popular items loved by our customers</p>
+                <p className="text-neutral-600">
+                  The most popular items loved by our customers
+                </p>
               </div>
               <Link href="/templates?sort=popular">
-                <Button variant="outline" size="sm" rightIcon={<ArrowRight size={16} />}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  rightIcon={<ArrowRight size={16} />}
+                >
                   View More Bestsellers
                 </Button>
               </Link>
@@ -697,9 +770,9 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
 
           <div className="flex flex-wrap justify-center gap-6 lg:gap-10 mb-10">
             {[
-              { icon: TrendingUp, value: '85%', label: 'Creator earnings' },
-              { icon: Users, value: '10K+', label: 'Happy customers' },
-              { icon: Sparkles, value: '500+', label: 'Premium templates' },
+              { icon: TrendingUp, value: "85%", label: "Creator earnings" },
+              { icon: Users, value: "10K+", label: "Happy customers" },
+              { icon: Sparkles, value: "500+", label: "Premium templates" },
             ].map((stat, i) => (
               <div
                 key={stat.label}
@@ -710,7 +783,9 @@ export function HomeContent({ initialFeatured, initialCategories }: HomeContentP
                   <stat.icon size={20} className="text-primary-400" />
                 </div>
                 <div className="text-left">
-                  <div className="text-white font-bold text-lg">{stat.value}</div>
+                  <div className="text-white font-bold text-lg">
+                    {stat.value}
+                  </div>
                   <div className="text-neutral-500 text-xs">{stat.label}</div>
                 </div>
               </div>

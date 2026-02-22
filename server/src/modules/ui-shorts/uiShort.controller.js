@@ -38,4 +38,31 @@ export class UIShotController {
       next(error);
     }
   }
+
+  async adminGetAll(req, res, next) {
+    try {
+      const result = await uiShotService.adminGetAll(req.query);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async adminDelete(req, res, next) {
+    try {
+      const result = await uiShotService.adminDelete(req.params.id, req.user._id, req.body.reason);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async adminTogglePublished(req, res, next) {
+    try {
+      const result = await uiShotService.adminTogglePublished(req.params.id, req.user._id);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

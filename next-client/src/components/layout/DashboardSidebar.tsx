@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { ReactNode, useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { clsx } from 'clsx';
-import { LucideIcon, Menu, X } from 'lucide-react';
+import { ReactNode, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { clsx } from "clsx";
+import { LucideIcon, Menu, X } from "lucide-react";
 
 export interface NavItem {
   label: string;
@@ -13,6 +13,7 @@ export interface NavItem {
   onClick?: () => void;
   badge?: number;
   section?: string;
+  isActive?: boolean;
 }
 
 interface DashboardSidebarProps {
@@ -34,7 +35,7 @@ export function DashboardSidebar({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const sections = navItems.reduce<Record<string, NavItem[]>>((acc, item) => {
-    const section = item.section || 'main';
+    const section = item.section || "main";
     if (!acc[section]) acc[section] = [];
     acc[section].push(item);
     return acc;
@@ -44,25 +45,29 @@ export function DashboardSidebar({
     Object.entries(sections).map(([section, items], sectionIdx) => (
       <div key={section}>
         {sectionIdx > 0 && <div className="my-3 border-t border-neutral-100" />}
-        {section !== 'main' && (
+        {section !== "main" && (
           <p className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
             {section}
           </p>
         )}
         {items.map((item) => {
-          const isActive = item.path ? pathname === item.path : false;
+          const isActive =
+            item.isActive ?? (item.path ? pathname === item.path : false);
           const Icon = item.icon;
 
           const content = (
             <span
               className={clsx(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer',
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer",
                 isActive
-                  ? 'bg-primary-50 text-primary-600'
-                  : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+                  ? "bg-primary-50 text-primary-600"
+                  : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900",
               )}
             >
-              <Icon size={18} className={isActive ? 'text-primary-500' : 'text-neutral-400'} />
+              <Icon
+                size={18}
+                className={isActive ? "text-primary-500" : "text-neutral-400"}
+              />
               <span className="flex-1">{item.label}</span>
               {item.badge !== undefined && item.badge > 0 && (
                 <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full bg-error text-white">
@@ -104,10 +109,16 @@ export function DashboardSidebar({
         {/* Desktop Sidebar */}
         <aside className="hidden lg:flex flex-col w-64 border-r border-neutral-200 bg-white min-h-[calc(100vh-64px)] sticky top-16 shrink-0">
           <div className="p-6 border-b border-neutral-100">
-            <h2 className="text-lg font-display font-bold text-neutral-900">{title}</h2>
-            {subtitle && <p className="text-sm text-neutral-500 mt-0.5">{subtitle}</p>}
+            <h2 className="text-lg font-display font-bold text-neutral-900">
+              {title}
+            </h2>
+            {subtitle && (
+              <p className="text-sm text-neutral-500 mt-0.5">{subtitle}</p>
+            )}
           </div>
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">{renderNavItems()}</nav>
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            {renderNavItems()}
+          </nav>
         </aside>
 
         {/* Main content */}
@@ -138,7 +149,9 @@ export function DashboardSidebar({
                 </div>
               </div>
               {headerActions && (
-                <div className="flex items-center gap-2 sm:gap-3 shrink-0">{headerActions}</div>
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                  {headerActions}
+                </div>
               )}
             </div>
           </div>
@@ -146,7 +159,9 @@ export function DashboardSidebar({
           {/* Mobile navigation dropdown */}
           {mobileNavOpen && (
             <div className="lg:hidden bg-white border-b border-neutral-200 px-4 py-3 shadow-sm">
-              <nav className="space-y-1">{renderNavItems(() => setMobileNavOpen(false))}</nav>
+              <nav className="space-y-1">
+                {renderNavItems(() => setMobileNavOpen(false))}
+              </nav>
             </div>
           )}
 

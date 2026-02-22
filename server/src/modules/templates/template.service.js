@@ -197,21 +197,49 @@ export class TemplateService {
       throw new AppError('Template not found or unauthorized', 404);
     }
 
-    // Only allow updates if draft or pending
-    if (!['draft', 'pending'].includes(template.status)) {
-      throw new AppError('Cannot edit approved or rejected templates', 400);
+    // Allow updates for draft, pending, and approved templates (but not rejected)
+    if (template.status === 'rejected') {
+      throw new AppError('Cannot edit rejected templates. Please create a new template.', 400);
+    }
+
+    // Track changes for changelog
+    const changes = [];
+    const editableFields = ['title', 'description', 'price', 'salePrice', 'category', 'tags', 'metaDescription', 'keywords', 'version'];
+    
+    for (const field of editableFields) {
+      if (data[field] !== undefined && data[field] !== template[field]) {
+        // Don't track demoUrl changes for submitted templates
+        if (template.status === 'approved' && field === 'demoUrl') {
+          continue;
+        }
+        changes.push({
+          field,
+          oldValue: template[field],
+          newValue: data[field]
+        });
+      }
     }
 
     // Update files if provided
-    if (files.thumbnail?.[0]) {
+    if (files?.thumbnail?.[0]) {
       data.thumbnail = files.thumbnail[0].filename;
     }
-    if (files.gallery) {
+    if (files?.gallery) {
       data.gallery = files.gallery.map(f => f.filename);
     }
-    if (files.templateFile?.[0]) {
+    if (files?.templateFile?.[0]) {
       data.templateFile = files.templateFile[0].filename;
       data.fileSize = files.templateFile[0].size;
+    }
+
+    // Add to changelog if there are changes
+    if (changes.length > 0) {
+      template.changeLog.push({
+        editedAt: new Date(),
+        editedBy: creatorId,
+        changes,
+        reason: data.editReason || 'Template updated by creator'
+      });
     }
 
     Object.assign(template, data);

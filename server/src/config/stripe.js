@@ -4,8 +4,9 @@ const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 
 // Check if we have real Stripe keys (not placeholder)
 export const isDemoMode = !STRIPE_SECRET_KEY ||
-  STRIPE_SECRET_KEY.includes('your_stripe') ||
-  STRIPE_SECRET_KEY === 'sk_test_your_stripe_secret_key' ||
+  STRIPE_SECRET_KEY.includes('your_') ||
+  STRIPE_SECRET_KEY.includes('_here') ||
+  STRIPE_SECRET_KEY.includes('placeholder') ||
   STRIPE_SECRET_KEY.length < 20;
 
 export const stripe = isDemoMode ? null : new Stripe(STRIPE_SECRET_KEY);
