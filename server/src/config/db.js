@@ -2,9 +2,12 @@ import mongoose from 'mongoose';
 
 export const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      // Options removed as they're now defaults in Mongoose 6+
-    });
+    const uri = process.env.MONGODB_URI;
+    if (!uri) {
+      throw new Error('MONGODB_URI is not defined');
+    }
+    console.log(`🔗 Connecting to MongoDB: ${uri.replace(/\/\/[^@]+@/, '//***@')}`);
+    const conn = await mongoose.connect(uri);
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
 
