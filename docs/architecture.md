@@ -1,6 +1,6 @@
-# Flowbites Architecture
+# Architecture
 
-## System Architecture
+## System Overview
 
 ```text
 [ Browser / Mobile Web ]
@@ -34,7 +34,7 @@ internet
 [ certbot ] manages TLS certificates for nginx
 ```
 
-## Backend Module Dependency Map
+## Backend Module Dependencies
 
 ```text
 auth -> users, creators, token, loginAttempt, email service
@@ -54,7 +54,7 @@ analytics -> analytics events/metrics
 
 ## Data Flows
 
-## Checkout Flow (Template Purchase)
+### Checkout Flow (Template Purchase)
 
 ```text
 Buyer -> POST /api/checkout/template
@@ -74,7 +74,7 @@ Stripe webhook checkout.session.completed -> /api/webhooks/stripe
          5) send notifications + purchase email
 ```
 
-## Refund Flow
+### Refund Flow
 
 ```text
 Buyer -> POST /api/refunds/request
@@ -89,15 +89,11 @@ Admin -> POST /api/refunds/admin/:id/approve
       -> notify + email buyer
 ```
 
-## Creator Onboarding Flow
+### Creator Onboarding Flow
 
 ```text
 Creator -> /api/creators/onboarding/* steps
-  personal-info
-  government-id (files)
-  selfie (file)
-  bank-details
-  creator-reference
+  personal-info -> government-id -> selfie -> bank-details -> creator-reference
 
 Each step -> updates CreatorProfile.onboarding + completedSteps
 
@@ -109,7 +105,7 @@ Admin reviews -> /api/admin/creators/:id/approve|reject
        -> onboarding.status=approved|rejected
 ```
 
-## Authentication Flow
+### Authentication Flow
 
 ```text
 Register -> POST /api/auth/register
@@ -124,7 +120,7 @@ Login -> POST /api/auth/login
       -> issue tokens + persist refresh token
 
 Refresh -> POST /api/auth/refresh
-        -> verify refresh token signature + token presence in user.refreshTokens
+        -> verify refresh token signature + token presence
         -> issue new access token
 
 Logout -> POST /api/auth/logout
@@ -133,42 +129,142 @@ Logout -> POST /api/auth/logout
 
 ## Database Schema Relationships
 
-Core references:
-- `User`
-  - 1:1 `CreatorProfile` via `CreatorProfile.userId`
-  - 1:N `Order.buyerId`, `ServiceOrder.buyerId`, `ServiceOrder.creatorId`
-  - 1:N `Notification.userId`
-- `Template`
-  - N:1 `Template.creatorId -> User`
-  - N:1 `Template.creatorProfileId -> CreatorProfile`
-  - N:1 `Template.category -> Category`
-  - 1:N `TemplateVersion.templateId`
-  - 1:N `Review.templateId`
-  - 1:N `License.templateId`
-  - 1:N `Wishlist.templateId`
-- `Order`
-  - N:1 `Order.buyerId -> User`
-  - 1:N `License.orderId`
-  - 1:1 `Refund.orderId` (unique)
-- `ServicePackage`
-  - N:1 `ServicePackage.creatorId -> User`
-  - N:1 `ServicePackage.templateId -> Template`
-- `ServiceOrder`
-  - N:1 `ServiceOrder.packageId -> ServicePackage`
-  - N:1 `ServiceOrder.buyerId/creatorId/assignedCreatorId -> User`
-- `Review`
-  - N:1 `Review.orderId -> Order`
-  - N:1 `Review.buyerId -> User`
-- `Follower`
-  - unique edge `(followerId -> creatorId)` between users
-- `CouponUsage`
-  - N:1 `couponId -> Coupon`, `userId -> User`, `orderId -> Order`
+### Core Entities
 
-## Frontend-Backend Boundaries
-- Frontend modules call backend through Axios client (`next-client/src/lib/api/client.ts`).
-- Next config rewrites `/api/*` and `/uploads/*` to API origin.
-- Auth state is held in client store; API enforces auth/role server-side.
+**User**
+- 1:1 `CreatorProfile` via `CreatorProfile.userId`
+- 1:N `Order.buyerId`, `ServiceOrder.buyerId`, `ServiceOrder.creatorId`
+- 1:N `Notification.userId`
 
-## Background / Scheduled Work
-- Cleanup scheduler starts from `server/src/jobs/cleanup.js` on boot.
-- Token/notification data retention also uses Mongo TTL indexes.
+**Template**
+- N:1 `Template.creatorId -> User`
+- N:1 `Template.creatorProfileId -> CreatorProfile`
+- N:1 `Template.category -> Category`
+- 1:N `TemplateVersion.templateId`
+- 1:N `Review.templateId`
+- 1:N `License.templateId`
+- 1:N `Wishlist.templateId`
+
+**Order**
+- N:1 `Order.buyerId -> User`
+- 1:N `License.orderId`
+- 1:1 `Refund.orderId` (unique)
+
+**ServicePackage**
+- N:1 `ServicePackage.creatorId -> User`
+- N:1 `ServicePackage.templateId -> Template`
+
+**ServiceOrder**
+- N:1 `ServiceOrder.packageId -> ServicePackage`
+- N:1 `ServiceOrder.buyerId/creatorId -> User`
+
+**Review**
+- N:1 `Review.orderId -> Order`
+- N:1 `Review.buyerId -> User`
+
+**Follower**
+- Unique edge `(followerId -> creatorId)` between users
+
+## Database Indexes
+
+### Critical Indexes (Applied)
+
+| Collection | Index | Purpose |
+|------------|-------|---------|
+| `users` | `email` unique | Authentication |
+| `users` | `{ role: 1 }` | Role filtering |
+| `templates` | `slug` unique | URL lookup |
+| `templates` | `{ status: 1, createdAt: -1 }` | Newest listings |
+| `templates` | `{ status: 1, price: 1 }` | Price sorting |
+| `templates` | `{ creatorId: 1, status: 1, createdAt: -1 }` | Creator dashboards |
+| `templates` | `{ status: 1, isFeatured: 1, createdAt: -1 }` | Featured filtering |
+| `templates` | Text index on `title`, `description` | Search |
+| `orders` | `{ buyerId: 1, createdAt: -1 }` | Order history |
+| `orders` | `{ stripeChargeId: 1 }` | Webhook lookups |
+| `orders` | `{ stripePaymentIntentId: 1 }` | Payment tracking |
+| `licenses` | `{ userId: 1, templateId: 1 }` | License checks |
+| `reviews` | `{ templateId: 1, createdAt: -1 }` | Template reviews |
+| `reviews` | `{ buyerId: 1, templateId: 1 }` | Duplicate prevention |
+| `notifications` | `{ userId: 1, read: 1, createdAt: -1 }` | Unread feed |
+| `loginAttempts` | `{ email: 1, createdAt: -1 }` | Brute force detection |
+| `coupons` | `code` unique | Coupon lookup |
+
+### Residual Index Recommendations
+
+- `CreatorProfile`: `{ 'onboarding.status': 1, 'onboarding.submittedAt': 1 }` for admin review queue
+- `ServiceOrder`: `{ buyerId: 1, createdAt: -1 }` for buyer order history
+- `AuditLog`: TTL index for automatic cleanup after 1 year
+
+## Architecture Principles
+
+### 1. API-First
+- Define API contracts before building UI
+- Validate all request/response shapes
+- Treat API responses as stable products
+
+### 2. Modular by Domain
+Modules map to business capabilities:
+- catalog, search, pricing, checkout, licensing
+- creators, reviews, analytics, notifications
+- RBAC, admin operations
+
+### 3. Thin Controllers, Strong Services
+Controllers only:
+- Parse request
+- Call service
+- Map result to HTTP response
+
+### 4. Read/Write Separation
+- Public listing/search vs admin moderation
+- Write workflows separated from read workflows
+
+### 5. Explicit Contracts
+Use DTOs instead of raw Mongoose documents:
+- `TemplateCardDto`
+- `TemplateDetailDto`
+- `CreatorSummaryDto`
+- `ReviewSummaryDto`
+- `OrderSummaryDto`
+
+### 6. Event-Driven Side Effects
+Cross-cutting features consume events:
+- notifications, analytics, audit logs
+- search indexing, denormalized stat updates
+
+## Target Module Structure
+
+```text
+server/src/modules/<domain>/
+  <domain>.routes.js
+  <domain>.controller.js
+  <domain>.service.js
+  <domain>.repository.js
+  <domain>.validator.js
+  <domain>.contract.js
+  <domain>.events.js
+  <domain>.model.js
+  __tests__/
+```
+
+## Data Migration
+
+### Cloudinary Migration (for legacy local images)
+
+```bash
+cd server
+npm run migrate-cloudinary
+```
+
+### Database Migrations
+
+Place migration scripts in `server/src/scripts/migrations/`:
+
+```javascript
+// Example: Add new field to existing documents
+async function migrate() {
+  await Template.updateMany(
+    { newField: { $exists: false } },
+    { $set: { newField: defaultValue } }
+  );
+}
+```

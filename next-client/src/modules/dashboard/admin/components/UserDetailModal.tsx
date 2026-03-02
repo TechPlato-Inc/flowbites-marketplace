@@ -17,7 +17,7 @@ interface AdminUserInfo {
   _id: string;
   name: string;
   email: string;
-  role: "buyer" | "creator" | "admin";
+  role: "buyer" | "creator" | "admin" | "super_admin";
   avatar?: string;
   isActive: boolean;
   isBanned: boolean;
@@ -81,11 +81,13 @@ export function UserDetailModal({
             <div className="flex items-center gap-2 mt-1">
               <Badge
                 variant={
-                  user.role === "admin"
+                  user.role === "super_admin"
                     ? "error"
-                    : user.role === "creator"
-                      ? "success"
-                      : "neutral"
+                    : user.role === "admin"
+                      ? "error"
+                      : user.role === "creator"
+                        ? "success"
+                        : "neutral"
                 }
                 size="sm"
               >

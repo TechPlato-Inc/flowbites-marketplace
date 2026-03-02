@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api } from "@/lib/api/client";
 import { Modal, Button } from "@/design-system";
 import { AlertCircle, CheckCircle, Flag } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -52,8 +53,8 @@ export function ReportModal({
         description: description.trim() || undefined,
       });
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to submit report");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to submit report"));
     } finally {
       setLoading(false);
     }

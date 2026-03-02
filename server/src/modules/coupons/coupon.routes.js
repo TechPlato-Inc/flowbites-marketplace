@@ -1,8 +1,13 @@
 import express from 'express';
 import { CouponController } from './coupon.controller.js';
 import { validate } from '../../middleware/validate.js';
-import { createCouponSchema, validateCouponSchema } from './coupon.validator.js';
-import { authenticate, requireAdmin } from '../../middleware/auth.js';
+import {
+  createCouponSchema,
+  updateCouponSchema,
+  validateCouponSchema,
+  listCouponsQuerySchema,
+} from './coupon.validator.js';
+import { authenticate, can } from '../../middleware/auth.js';
 import { userRateLimit } from '../../middleware/userRateLimit.js';
 
 const router = express.Router();
@@ -18,9 +23,9 @@ router.post(
 );
 
 // Admin: CRUD
-router.get('/admin', authenticate, requireAdmin, couponController.getCoupons);
-router.post('/admin', authenticate, requireAdmin, validate(createCouponSchema), couponController.createCoupon);
-router.patch('/admin/:couponId', authenticate, requireAdmin, couponController.updateCoupon);
-router.delete('/admin/:couponId', authenticate, requireAdmin, couponController.deleteCoupon);
+router.get('/admin', authenticate, can('coupons.manage'), validate(listCouponsQuerySchema), couponController.getCoupons);
+router.post('/admin', authenticate, can('coupons.manage'), validate(createCouponSchema), couponController.createCoupon);
+router.patch('/admin/:couponId', authenticate, can('coupons.manage'), validate(updateCouponSchema), couponController.updateCoupon);
+router.delete('/admin/:couponId', authenticate, can('coupons.manage'), couponController.deleteCoupon);
 
 export default router;

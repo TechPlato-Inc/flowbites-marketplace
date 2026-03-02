@@ -1,12 +1,14 @@
-import { ReviewService } from './review.service.js';
+import { ReviewQueryService } from './review.queryService.js';
+import { ReviewWriteService } from './review.writeService.js';
 
-const reviewService = new ReviewService();
+const queryService = new ReviewQueryService();
+const writeService = new ReviewWriteService();
 
 export class ReviewController {
   // GET /reviews/template/:templateId
   async getTemplateReviews(req, res, next) {
     try {
-      const data = await reviewService.getTemplateReviews(req.params.templateId, {
+      const data = await queryService.getTemplateReviews(req.params.templateId, {
         page: parseInt(req.query.page) || 1,
         limit: parseInt(req.query.limit) || 10,
       });
@@ -19,7 +21,7 @@ export class ReviewController {
   // POST /reviews/template/:templateId
   async createReview(req, res, next) {
     try {
-      const review = await reviewService.createReview(
+      const review = await writeService.createReview(
         req.user._id,
         req.params.templateId,
         req.body
@@ -33,7 +35,7 @@ export class ReviewController {
   // PATCH /reviews/:reviewId
   async updateReview(req, res, next) {
     try {
-      const review = await reviewService.updateReview(
+      const review = await writeService.updateReview(
         req.user._id,
         req.params.reviewId,
         req.body
@@ -47,7 +49,7 @@ export class ReviewController {
   // DELETE /reviews/:reviewId
   async deleteReview(req, res, next) {
     try {
-      await reviewService.deleteReview(req.user._id, req.params.reviewId);
+      await writeService.deleteReview(req.user._id, req.params.reviewId);
       res.json({ success: true, message: 'Review deleted' });
     } catch (error) {
       next(error);
@@ -57,7 +59,7 @@ export class ReviewController {
   // GET /reviews/check/:templateId — check if current user has reviewed
   async hasReviewed(req, res, next) {
     try {
-      const reviewed = await reviewService.hasReviewed(req.user._id, req.params.templateId);
+      const reviewed = await queryService.hasReviewed(req.user._id, req.params.templateId);
       res.json({ success: true, data: { reviewed } });
     } catch (error) {
       next(error);
@@ -67,7 +69,7 @@ export class ReviewController {
   // GET /admin/reviews
   async adminGetReviews(req, res, next) {
     try {
-      const data = await reviewService.adminGetReviews({
+      const data = await queryService.adminGetReviews({
         page: parseInt(req.query.page) || 1,
         limit: parseInt(req.query.limit) || 20,
         status: req.query.status,
@@ -81,7 +83,7 @@ export class ReviewController {
   // PATCH /admin/reviews/:reviewId/moderate
   async moderateReview(req, res, next) {
     try {
-      const review = await reviewService.moderateReview(
+      const review = await writeService.moderateReview(
         req.user._id,
         req.params.reviewId,
         req.body

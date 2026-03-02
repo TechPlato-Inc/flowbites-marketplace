@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
-import { User } from '../modules/users/user.model.js';
+import { rbacService } from '../modules/rbac/rbac.service.js';
+import { getCachedUser } from '../lib/userCache.js';
+import logger from '../lib/logger.js';
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -13,7 +15,7 @@ export const authenticate = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
-    const user = await User.findById(decoded.userId).select('-password');
+    const user = await getCachedUser(decoded.userId);
 
     if (!user) {
       return res.status(401).json({
@@ -22,7 +24,11 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
+    // Resolve permissions from role + customPermissions (cached, no extra DB query)
+    const permissions = await rbacService.resolveUserPermissions(user);
     req.user = user;
+    req.user.permissions = permissions;
+
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
@@ -40,19 +46,18 @@ export const authenticate = async (req, res, next) => {
   }
 };
 
+// ── Legacy role-based authorization ──────────────────────────────────────────
+// DEPRECATED: Use can() instead. These are kept only for backward compatibility
+// and will be removed in a future release.
+
+/** @deprecated Use can('permission.name') instead. */
 export const authorize = (...roles) => {
+  if (process.env.NODE_ENV === 'development') {
+    logger.warn({ roles }, 'authorize() is deprecated, use can(\'permission\') instead');
+  }
   return (req, res, next) => {
-    // Super admin can access everything
-    if (req.user.role === 'super_admin') {
-      return next();
-    }
-    
-    // Admin can access admin routes
-    if (roles.includes('admin') && req.user.role === 'admin') {
-      return next();
-    }
-    
-    // Check other specific roles
+    if (req.user.role === 'super_admin') return next();
+    if (roles.includes('admin') && req.user.role === 'admin') return next();
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
@@ -63,8 +68,11 @@ export const authorize = (...roles) => {
   };
 };
 
-// Middleware specifically for admin routes (both admin and super_admin)
+/** @deprecated Use can('dashboard.admin') instead. */
 export const requireAdmin = (req, res, next) => {
+  if (process.env.NODE_ENV === 'development') {
+    logger.warn('requireAdmin is deprecated, use can(\'dashboard.admin\') instead');
+  }
   if (!['admin', 'super_admin'].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
@@ -74,7 +82,7 @@ export const requireAdmin = (req, res, next) => {
   next();
 };
 
-// Middleware specifically for super admin only
+/** @deprecated Use requireSuperAdmin sparingly — prefer can() for most checks. */
 export const requireSuperAdmin = (req, res, next) => {
   if (req.user.role !== 'super_admin') {
     return res.status(403).json({
@@ -85,15 +93,60 @@ export const requireSuperAdmin = (req, res, next) => {
   next();
 };
 
+// ── New permission-based authorization ───────────────────────────────────────
+
+/**
+ * Permission-based authorization middleware.
+ * Checks if the authenticated user has ANY of the required permissions.
+ *
+ * Usage:
+ *   can('templates.approve')                          // single permission
+ *   can('templates.approve', 'templates.delete')      // any of these
+ *
+ * @param {...string} requiredPermissions
+ */
+export const can = (...requiredPermissions) => {
+  return (req, res, next) => {
+    // super_admin always passes
+    if (req.user.role === 'super_admin') {
+      return next();
+    }
+
+    if (!req.user.permissions || req.user.permissions.length === 0) {
+      return res.status(403).json({
+        success: false,
+        error: 'Insufficient permissions',
+      });
+    }
+
+    const hasAccess = requiredPermissions.some(perm =>
+      rbacService.hasPermission(req.user.permissions, perm)
+    );
+
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        error: `Missing required permission: ${requiredPermissions.join(' or ')}`,
+      });
+    }
+
+    next();
+  };
+};
+
+// ── Optional auth (unchanged) ────────────────────────────────────────────────
+
 export const optionalAuth = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.accessToken;
 
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
-      const user = await User.findById(decoded.userId).select('-password');
+      const user = await getCachedUser(decoded.userId);
       if (user) {
+        const permissions = await rbacService.resolveUserPermissions(user);
         req.user = user;
+        req.user.permissions = permissions;
       }
     }
     next();

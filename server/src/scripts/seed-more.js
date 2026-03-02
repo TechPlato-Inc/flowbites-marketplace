@@ -1,13 +1,35 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import path from 'path';
+import fs from 'fs';
 import { User } from '../modules/users/user.model.js';
 import { CreatorProfile } from '../modules/creators/creator.model.js';
 import { Template } from '../modules/templates/template.model.js';
 import { Category } from '../modules/categories/category.model.js';
 import { UIShot } from '../modules/ui-shorts/uiShort.model.js';
 import { ServicePackage } from '../modules/services/service.model.js';
+import { uploadToCloudinary, cloudinaryEnabled } from '../config/cloudinary.js';
 
 dotenv.config();
+
+const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+const _uploadCache = {};
+
+async function seedUpload(filename, localFolder, cloudinaryFolder) {
+  if (!filename || !cloudinaryEnabled()) return filename;
+  const key = `${localFolder}/${filename}`;
+  if (_uploadCache[key]) return _uploadCache[key];
+  const filePath = path.join(UPLOAD_DIR, localFolder, filename);
+  if (!fs.existsSync(filePath)) return filename;
+  try {
+    const result = await uploadToCloudinary(filePath, cloudinaryFolder);
+    const url = result ? result.secure_url : filename;
+    _uploadCache[key] = url;
+    return url;
+  } catch {
+    return filename;
+  }
+}
 
 const seedMore = async () => {
   try {
@@ -67,14 +89,20 @@ const seedMore = async () => {
     allProfiles.forEach(p => { profileMap[p.userId.toString()] = p._id; });
 
     // ===== CREATE 16 MORE TEMPLATES =====
-    const thumbnails = [
+    let thumbnails = [
       'flowperty-hero.webp', 'figma-1.webp', 'ethanfolio-full.webp', 'flowperty-full.webp',
       'lucasflow-full.webp', 'image-extra.webp', 'figma-2.webp', 'wealth-full.webp',
       'flowfinc-full.webp', 'landing-ui.webp', 'platform.webp', 'flowperty-thumb.webp',
       'homepage6-full.webp', 'jamesbond-thumb.webp', 'ui-templates.webp', 'monexa-thumb.webp',
     ];
 
-    const newTemplates = await Template.create([
+    // Upload thumbnails to Cloudinary
+    if (cloudinaryEnabled()) {
+      console.log('☁️  Uploading template images to Cloudinary...');
+      thumbnails = await Promise.all(thumbnails.map(t => seedUpload(t, 'images', 'flowbites/images')));
+    }
+
+    const templateData = [
       {
         title: 'Nova — AI Startup Landing Page', slug: 'nova-ai-startup-landing',
         description: 'Sleek landing page for AI startups with animated hero, feature showcase, and waitlist signup.',
@@ -252,19 +280,36 @@ const seedMore = async () => {
         version: '1.0.0', stats: { views: 3560, purchases: 167, revenue: 4843, likes: 789, downloads: 167 },
         moderatedBy: admin._id, moderatedAt: new Date('2026-02-11')
       },
-    ]);
+    ];
+
+    // Upload gallery images to Cloudinary
+    if (cloudinaryEnabled()) {
+      for (const t of templateData) {
+        if (t.gallery) t.gallery = await Promise.all(t.gallery.map(img => seedUpload(img, 'images', 'flowbites/gallery')));
+      }
+      console.log('✅ Template images uploaded to Cloudinary');
+    }
+
+    const newTemplates = await Template.create(templateData);
     console.log(`✅ Created ${newTemplates.length} new templates`);
 
     // ===== CREATE 15 MORE UI SHOTS =====
     const allTemplates = await Template.find({ status: 'approved' });
 
-    const shotImages = [
+    let shotImages = [
       'g1.webp', 'g2.webp', 'g3.webp',
       'g4.webp', 'g5.webp', 'g6.webp',
       'g7.webp', 'g8.webp', 'g9.webp',
       'g10.webp', 'g11.webp', 'g12.webp',
       'g13.webp', 'g14.webp', 'g15.webp',
     ];
+
+    // Upload shot images to Cloudinary
+    if (cloudinaryEnabled()) {
+      console.log('☁️  Uploading shot images to Cloudinary...');
+      shotImages = await Promise.all(shotImages.map(s => seedUpload(s, 'shots', 'flowbites/shots')));
+      console.log('✅ Shot images uploaded to Cloudinary');
+    }
 
     const newShots = await UIShot.create([
       {

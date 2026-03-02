@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Modal, Button, Input } from "@/design-system";
 import { createConversation } from "../services/messages.service";
 import { Search, User, AlertCircle, Package } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 interface NewMessageModalProps {
   isOpen: boolean;
@@ -107,8 +108,8 @@ export function NewMessageModal({
       // Close modal and navigate to the conversation
       onClose();
       router.push(`/dashboard/messages/${conversation._id}`);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to send message");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to send message"));
     } finally {
       setLoading(false);
     }

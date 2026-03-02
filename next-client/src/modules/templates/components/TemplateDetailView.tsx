@@ -2,10 +2,17 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
+import {
+  trackAddToCart,
+  trackPreview,
+  trackShare,
+  trackPurchaseStart,
+} from "@/lib/analytics";
 import { Button, Badge, Modal } from "@/design-system";
-import { getUploadUrl } from "@/lib/api/client";
+import { getUploadUrl, api } from "@/lib/api/client";
 import {
   fetchServicesByTemplate,
   purchaseTemplate,
@@ -18,6 +25,7 @@ import { WishlistButton } from "@/modules/wishlists/components/WishlistButton";
 import { getWishlistCount } from "@/modules/wishlists/services/wishlists.service";
 import { ReportButton } from "@/modules/reports/components/ReportButton";
 import type { Template, ServicePackage } from "@/types";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 import {
   ShoppingCart,
   ExternalLink,
@@ -87,6 +95,8 @@ export function TemplateDetailView({ template }: TemplateDetailViewProps) {
   const [requesting, setRequesting] = useState(false);
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
+  const [mainImgError, setMainImgError] = useState(false);
+  const [thumbErrors, setThumbErrors] = useState<Set<number>>(new Set());
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -95,22 +105,36 @@ export function TemplateDetailView({ template }: TemplateDetailViewProps) {
         .then(setServices)
         .catch(() => setServices([]))
         .finally(() => setServicesLoading(false));
+
+      // Track template view via dedicated endpoint (server-side dedup)
+      api.post(`/templates/${template._id}/view`).catch(() => {});
     }
-  }, [template._id]);
+  }, [
+    template._id,
+    template.slug,
+    template.title,
+    template.platform,
+    template.category,
+    template.price,
+  ]);
 
   const handlePurchase = async () => {
     if (!isAuthenticated) {
       router.push("/login");
       return;
     }
+
+    // Track purchase start
+    trackPurchaseStart(template._id, template.title, template.price);
+
     setPurchasing(true);
     setPurchaseError("");
     try {
       const { sessionUrl } = await purchaseTemplate(template._id);
       window.location.href = sessionUrl;
-    } catch (err: any) {
+    } catch (err: unknown) {
       setPurchaseError(
-        err?.response?.data?.error || "Purchase failed. Please try again.",
+        getErrorMessage(err, "Purchase failed. Please try again."),
       );
       setPurchasing(false);
     }
@@ -126,9 +150,9 @@ export function TemplateDetailView({ template }: TemplateDetailViewProps) {
     try {
       await requestCustomization(template._id, requestRequirements);
       setRequestSuccess(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setPurchaseError(
-        err?.response?.data?.error || "Request failed. Please try again.",
+        getErrorMessage(err, "Request failed. Please try again."),
       );
     } finally {
       setRequesting(false);
@@ -140,6 +164,9 @@ export function TemplateDetailView({ template }: TemplateDetailViewProps) {
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+
+      // Track share
+      trackShare(template._id, "copy_link");
     } catch {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -215,13 +242,19 @@ export function TemplateDetailView({ template }: TemplateDetailViewProps) {
             <div className="mb-8">
               <div className="relative aspect-[16/10] bg-neutral-100 rounded-xl overflow-hidden mb-3">
                 {allImages[activeImage] && (
-                  <img
-                    src={getUploadUrl(`images/${allImages[activeImage]}`)}
+                  <Image
+                    src={
+                      mainImgError
+                        ? IMG_FALLBACK
+                        : getUploadUrl(`images/${allImages[activeImage]}`)
+                    }
                     alt={`${template.title} — preview ${activeImage + 1}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = IMG_FALLBACK;
-                    }}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 66vw"
+                    className="object-cover"
+                    priority
+                    onError={() => setMainImgError(true)}
+                    unoptimized
                   />
                 )}
                 {template.isFeatured && (
@@ -241,21 +274,30 @@ export function TemplateDetailView({ template }: TemplateDetailViewProps) {
                   {allImages.map((img, i) => (
                     <button
                       key={i}
-                      onClick={() => setActiveImage(i)}
-                      className={`shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all ${
+                      onClick={() => {
+                        setActiveImage(i);
+                        setMainImgError(false);
+                      }}
+                      className={`shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all relative ${
                         activeImage === i
                           ? "border-primary-500 ring-2 ring-primary-500/20"
                           : "border-transparent opacity-70 hover:opacity-100"
                       }`}
                     >
-                      <img
-                        src={getUploadUrl(`images/${img}`)}
+                      <Image
+                        src={
+                          thumbErrors.has(i)
+                            ? IMG_FALLBACK
+                            : getUploadUrl(`images/${img}`)
+                        }
                         alt=""
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = IMG_FALLBACK;
-                        }}
+                        fill
+                        sizes="80px"
+                        className="object-cover"
+                        onError={() =>
+                          setThumbErrors((prev) => new Set(prev).add(i))
+                        }
+                        unoptimized
                       />
                     </button>
                   ))}
@@ -543,13 +585,14 @@ export function TemplateDetailView({ template }: TemplateDetailViewProps) {
                       variant="outline"
                       size="lg"
                       rightIcon={<ExternalLink size={16} />}
-                      onClick={() =>
+                      onClick={() => {
+                        trackPreview(template._id, template.title);
                         window.open(
                           template.demoUrl,
                           "_blank",
                           "noopener,noreferrer",
-                        )
-                      }
+                        );
+                      }}
                     >
                       Live Preview
                     </Button>
@@ -687,8 +730,6 @@ export function TemplateDetailView({ template }: TemplateDetailViewProps) {
           </Button>
         </div>
       </div>
-      <div className="h-20 lg:hidden" />
-
       {/* Related Templates */}
       <RelatedTemplates
         currentTemplateId={template._id}
@@ -696,6 +737,9 @@ export function TemplateDetailView({ template }: TemplateDetailViewProps) {
         platform={template.platform}
         limit={4}
       />
+
+      {/* Spacer for mobile sticky CTA */}
+      <div className="h-20 lg:hidden" />
 
       {/* Request Customization Modal */}
       <Modal

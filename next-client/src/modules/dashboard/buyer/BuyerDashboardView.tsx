@@ -87,7 +87,8 @@ export function BuyerDashboardView() {
   useEffect(() => {
     if (!authLoading && user) {
       if (user.role === "creator") router.replace("/dashboard/creator");
-      else if (user.role === "admin") router.replace("/dashboard/admin");
+      else if (user.role === "admin" || user.role === "super_admin")
+        router.replace("/dashboard/admin");
     }
   }, [authLoading, user, router]);
 

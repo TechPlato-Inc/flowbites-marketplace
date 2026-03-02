@@ -6,6 +6,7 @@ import { api } from "@/lib/api/client";
 import type { Order } from "@/types";
 import { CheckCircle, AlertCircle } from "lucide-react";
 import { showToast } from "@/design-system/Toast";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 interface RefundRequestModalProps {
   isOpen: boolean;
@@ -39,10 +40,12 @@ export function RefundRequestModal({
       setSuccess(true);
       showToast("Refund request submitted successfully!", "success");
       onSuccess?.();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err?.response?.data?.error ||
+        getErrorMessage(
+          err,
           "Failed to submit refund request. Please try again.",
+        ),
       );
     } finally {
       setSubmitting(false);

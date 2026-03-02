@@ -7,6 +7,7 @@ import { StarRating } from "./StarRating";
 import { ReviewCard } from "./ReviewCard";
 import { getReviews } from "../services/reviews.service";
 import { Star, MessageSquare, AlertCircle } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 interface ReviewListProps {
   templateId: string;
@@ -33,9 +34,9 @@ export function ReviewList({ templateId }: ReviewListProps) {
       }
       setSummary(data.summary);
       setHasMore(data.reviews.length === limit);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to fetch reviews:", err);
-      setError(err?.response?.data?.error || "Failed to load reviews");
+      setError(getErrorMessage(err, "Failed to load reviews"));
     } finally {
       setLoading(false);
     }

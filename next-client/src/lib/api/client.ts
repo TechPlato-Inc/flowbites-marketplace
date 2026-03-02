@@ -22,6 +22,32 @@ const AUTH_CHECK_PATHS = [
   "/auth/clear-session",
 ];
 
+// Retry interceptor for transient failures (5xx, network errors)
+const IDEMPOTENT_METHODS = ["get", "put", "delete", "head", "options"];
+const MAX_RETRIES = 2;
+
+api.interceptors.response.use(undefined, async (error) => {
+  const config = error.config;
+  if (!config) return Promise.reject(error);
+
+  config._retryCount = config._retryCount || 0;
+  const isIdempotent = IDEMPOTENT_METHODS.includes(
+    (config.method || "").toLowerCase(),
+  );
+  const isRetryable =
+    !error.response ||
+    (error.response.status >= 500 && error.response.status < 600);
+
+  if (isIdempotent && isRetryable && config._retryCount < MAX_RETRIES) {
+    config._retryCount++;
+    const delay = 300 * Math.pow(3, config._retryCount - 1); // 300ms, 900ms
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    return api(config);
+  }
+
+  return Promise.reject(error);
+});
+
 // Response interceptor to handle token refresh via cookies
 api.interceptors.response.use(
   (response) => response,
@@ -80,12 +106,4 @@ api.interceptors.response.use(
   },
 );
 
-export const getUploadUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  // Handle "images/https://..." or "shots/https://..." from components that prepend a folder
-  const stripped = path.replace(/^(images|shots|gallery)\//, "");
-  if (stripped.startsWith("http")) return stripped;
-  const UPLOADS_URL = process.env.NEXT_PUBLIC_UPLOADS_URL || "/uploads";
-  return `${UPLOADS_URL}/${path}`;
-};
+export { getUploadUrl } from "@/lib/utils/uploadUrl";

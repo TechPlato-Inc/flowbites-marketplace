@@ -169,26 +169,41 @@ templateSchema.index({ status: 1, 'stats.purchases': -1 });
 templateSchema.index({ platform: 1, status: 1 });
 templateSchema.index({ status: 1, createdAt: -1 });
 templateSchema.index({ status: 1, price: 1 });
+templateSchema.index({ status: 1, 'stats.averageRating': -1 });
+templateSchema.index({ status: 1, salePrice: 1 });
 templateSchema.index({ creatorId: 1, status: 1, createdAt: -1 });
 templateSchema.index({ status: 1, isFeatured: 1, createdAt: -1 });
 templateSchema.index({ title: 'text', description: 'text' });
 
-// Generate slug before saving
-templateSchema.pre('save', async function(next) {
+// Generate slug before saving — uses unique index + retry to avoid race conditions
+templateSchema.pre('save', function(next) {
   if (this.isModified('title')) {
-    let baseSlug = slugify(this.title, { lower: true, strict: true });
-    let slug = baseSlug;
-    let counter = 1;
-
-    // Ensure unique slug
-    while (await mongoose.model('Template').findOne({ slug, _id: { $ne: this._id } })) {
-      slug = `${baseSlug}-${counter}`;
-      counter++;
-    }
-
-    this.slug = slug;
+    this.slug = slugify(this.title, { lower: true, strict: true });
   }
   next();
 });
+
+/**
+ * Save with slug collision retry. If a duplicate key error occurs on the slug,
+ * append an incrementing suffix and retry (max 5 attempts).
+ */
+templateSchema.methods.saveWithSlugRetry = async function (...args) {
+  const baseSlug = this.slug;
+  let attempts = 0;
+  const MAX_ATTEMPTS = 5;
+
+  while (attempts < MAX_ATTEMPTS) {
+    try {
+      return await this.save(...args);
+    } catch (err) {
+      if (err.code === 11000 && err.keyPattern?.slug && attempts < MAX_ATTEMPTS - 1) {
+        attempts++;
+        this.slug = `${baseSlug}-${attempts}`;
+      } else {
+        throw err;
+      }
+    }
+  }
+};
 
 export const Template = mongoose.model('Template', templateSchema);

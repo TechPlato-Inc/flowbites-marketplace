@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/design-system";
@@ -9,6 +10,7 @@ import { getUploadUrl } from "@/lib/api/client";
 import { api } from "@/lib/api/client";
 import { CouponInput } from "@/modules/checkout/components/CouponInput";
 import { Trash2, ArrowLeft, Lock, Check, Loader2 } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -36,7 +38,7 @@ export default function CheckoutPage() {
         price: item.salePrice ?? item.price,
       }));
 
-      const payload: any = {
+      const payload: { items: typeof checkoutItems; couponCode?: string } = {
         items: checkoutItems,
       };
 
@@ -54,10 +56,8 @@ export default function CheckoutPage() {
       } else if (data.data.sessionUrl) {
         window.location.href = data.data.sessionUrl;
       }
-    } catch (err: any) {
-      setError(
-        err?.response?.data?.error || "Checkout failed. Please try again.",
-      );
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Checkout failed. Please try again."));
       setLoading(false);
     }
   };
@@ -112,10 +112,13 @@ export default function CheckoutPage() {
                     key={item.templateId}
                     className="flex gap-4 p-4 bg-neutral-50 rounded-lg"
                   >
-                    <img
+                    <Image
                       src={getUploadUrl(`images/${item.thumbnail}`)}
                       alt={item.title}
+                      width={96}
+                      height={80}
                       className="w-24 h-20 object-cover rounded-lg"
+                      unoptimized
                     />
                     <div className="flex-1">
                       <Link

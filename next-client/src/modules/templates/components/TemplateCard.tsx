@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Badge } from "@/design-system";
 import { getUploadUrl } from "@/lib/api/client";
 import { PLATFORM_COLORS, PLATFORM_LABELS } from "@/lib/constants";
@@ -8,6 +9,12 @@ import { useCartStore } from "@/stores/cartStore";
 import type { Template } from "@/types";
 import { WishlistButton } from "@/modules/wishlists/components/WishlistButton";
 import { useAuthStore } from "@/stores/authStore";
+import {
+  trackTemplateClick,
+  trackAddToCart,
+  trackQuickView,
+  trackPreview,
+} from "@/lib/analytics";
 import {
   Eye,
   ShoppingCart,
@@ -24,9 +31,15 @@ const IMG_FALLBACK =
 
 interface TemplateCardProps {
   template: Template;
+  position?: number;
+  source?: string;
 }
 
-export function TemplateCard({ template }: TemplateCardProps) {
+export function TemplateCard({
+  template,
+  position = 0,
+  source = "listing",
+}: TemplateCardProps) {
   const { isAuthenticated } = useAuthStore();
   const platform = template.platform as keyof typeof PLATFORM_COLORS;
   const platformColor = PLATFORM_COLORS[platform] || "bg-neutral-700";
@@ -40,6 +53,7 @@ export function TemplateCard({ template }: TemplateCardProps) {
       : "#";
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imgError, setImgError] = useState(false);
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const { addItem, isInCart } = useCartStore();
   const [added, setAdded] = useState(false);
@@ -53,6 +67,12 @@ export function TemplateCard({ template }: TemplateCardProps) {
       addItem(template);
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
+
+      // Track add to cart
+      trackAddToCart(template._id, template.title, template.price, {
+        source,
+        position,
+      });
     }
   };
 
@@ -60,18 +80,25 @@ export function TemplateCard({ template }: TemplateCardProps) {
     e.preventDefault();
     e.stopPropagation();
     setQuickViewOpen(true);
+
+    // Track quick view
+    trackQuickView(template._id, template.title, source, {
+      position,
+    });
   };
   const images = [template.thumbnail, ...(template.gallery || [])].slice(0, 4);
 
   const nextImage = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setImgError(false);
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
   };
 
   const prevImage = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setImgError(false);
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
 
@@ -88,40 +115,48 @@ export function TemplateCard({ template }: TemplateCardProps) {
       )
     : 0;
 
+  const handleTemplateClick = () => {
+    // Track template click
+    trackTemplateClick(template._id, template.slug, position, {
+      source,
+      templatePrice: template.price,
+      platform: template.platform,
+    });
+  };
+
   return (
     <div className="group bg-white border border-neutral-200 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300">
       {/* Image container */}
       <Link
         href={`/templates/${template.slug}`}
         className="block relative overflow-hidden bg-neutral-100"
+        onClick={handleTemplateClick}
       >
-        <div className="aspect-[4/3]">
-          <img
-            src={getUploadUrl(`images/${currentImage}`)}
+        <div className="aspect-[4/3] relative">
+          <Image
+            src={
+              imgError ? IMG_FALLBACK : getUploadUrl(`images/${currentImage}`)
+            }
             alt={template.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = IMG_FALLBACK;
-            }}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={() => setImgError(true)}
+            unoptimized
           />
         </div>
 
-        {/* Platform badge - top right */}
-        <div className="absolute top-3 right-3">
+        {/* Top-right badges */}
+        <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-2">
           <span
             className={`inline-block px-2.5 py-1 rounded text-[10px] font-bold tracking-wider text-white shadow-lg ${platformColor}`}
           >
             {platformLabel}
           </span>
-        </div>
-
-        {/* Wishlist Button */}
-        {isAuthenticated && (
-          <div className="absolute top-3 right-16 z-10">
+          {isAuthenticated && (
             <WishlistButton templateId={template._id} size="sm" />
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Sale badge - top left */}
         {hasSale && (
@@ -146,14 +181,14 @@ export function TemplateCard({ template }: TemplateCardProps) {
           <>
             <button
               onClick={prevImage}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-md sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200"
               aria-label="Previous image"
             >
               <ChevronLeft size={18} className="text-neutral-700" />
             </button>
             <button
               onClick={nextImage}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-md sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200"
               aria-label="Next image"
             >
               <ChevronRight size={18} className="text-neutral-700" />
@@ -170,6 +205,7 @@ export function TemplateCard({ template }: TemplateCardProps) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  setImgError(false);
                   setCurrentImageIndex(idx);
                 }}
                 className={`w-2 h-2 rounded-full transition-colors ${
@@ -195,6 +231,10 @@ export function TemplateCard({ template }: TemplateCardProps) {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                trackPreview(template._id, template.title, {
+                  source,
+                  position,
+                });
                 window.open(template.demoUrl, "_blank", "noopener,noreferrer");
               }}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors shadow-lg"
@@ -278,9 +318,10 @@ export function TemplateCard({ template }: TemplateCardProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="px-4 py-2 border border-primary-600 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-50 transition-colors"
+                className="inline-flex items-center gap-1.5 px-2 sm:px-4 py-2 border border-primary-600 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-50 transition-colors"
               >
-                Live Preview
+                <Eye size={16} className="shrink-0 sm:hidden" />
+                <span className="hidden sm:inline">Live Preview</span>
               </a>
             )}
           </div>

@@ -19,6 +19,7 @@ import {
   SearchSuggestion,
   PopularTemplate,
 } from "../services/search.service";
+import { trackSearch, trackSearchResultClick } from "@/lib/analytics";
 
 interface SearchResult {
   _id: string;
@@ -197,6 +198,7 @@ export function SearchBar() {
   const handleSubmit = () => {
     if (query.trim()) {
       saveRecentSearch(query);
+      trackSearch(query.trim(), results.length, { source: "search_bar" });
       router.push(`/search?q=${encodeURIComponent(query)}`);
       setIsOpen(false);
       setHighlightedIndex(-1);
@@ -225,8 +227,15 @@ export function SearchBar() {
     inputRef.current?.focus();
   };
 
-  const handleSuggestionClick = (suggestion: SearchSuggestion) => {
+  const handleSuggestionClick = (
+    suggestion: SearchSuggestion,
+    index: number,
+  ) => {
     saveRecentSearch(suggestion.title);
+    trackSearchResultClick(query, suggestion._id, index, {
+      source: "autocomplete",
+      templateTitle: suggestion.title,
+    });
     router.push(`/templates/${suggestion.slug}`);
     setIsOpen(false);
     setHighlightedIndex(-1);
@@ -286,7 +295,7 @@ export function SearchBar() {
                   {suggestions.map((suggestion, index) => (
                     <button
                       key={suggestion._id}
-                      onClick={() => handleSuggestionClick(suggestion)}
+                      onClick={() => handleSuggestionClick(suggestion, index)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left ${
                         index === highlightedIndex
                           ? "bg-primary-50"

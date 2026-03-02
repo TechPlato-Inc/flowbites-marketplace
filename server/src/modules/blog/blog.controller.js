@@ -1,19 +1,25 @@
-import { BlogService } from './blog.service.js';
+import { BlogQueryService } from './blog.queryService.js';
+import { BlogWriteService } from './blog.writeService.js';
+import { rbacService } from '../rbac/rbac.service.js';
+import { listPostsQuerySchema } from './blog.validator.js';
 
-const blogService = new BlogService();
+const queryService = new BlogQueryService();
+const writeService = new BlogWriteService();
 
 export class BlogController {
   // Public endpoints
   async getAll(req, res, next) {
     try {
-      const data = await blogService.getAll({
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 12,
-        category: req.query.category,
-        tag: req.query.tag,
-        search: req.query.search || req.query.q,
-        sort: req.query.sort,
-      });
+      const parsed = listPostsQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid query parameters',
+          details: parsed.error.issues,
+        });
+      }
+
+      const data = await queryService.getAll(parsed.data);
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -22,8 +28,8 @@ export class BlogController {
 
   async getBySlug(req, res, next) {
     try {
-      const post = await blogService.getBySlug(req.params.slug);
-      const related = await blogService.getRelated(post._id, post.category);
+      const post = await queryService.getBySlug(req.params.slug);
+      const related = await queryService.getRelated(post._id, post.category);
       res.json({ success: true, data: { post, related } });
     } catch (error) {
       next(error);
@@ -32,7 +38,7 @@ export class BlogController {
 
   async getCategories(req, res, next) {
     try {
-      const data = await blogService.getCategories();
+      const data = await queryService.getCategories();
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -41,7 +47,7 @@ export class BlogController {
 
   async getTags(req, res, next) {
     try {
-      const data = await blogService.getTags();
+      const data = await queryService.getTags();
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -50,7 +56,7 @@ export class BlogController {
 
   async getFeatured(req, res, next) {
     try {
-      const data = await blogService.getFeatured();
+      const data = await queryService.getFeatured();
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -60,7 +66,7 @@ export class BlogController {
   // Authenticated endpoints
   async create(req, res, next) {
     try {
-      const post = await blogService.create(
+      const post = await writeService.create(
         {
           ...req.body,
           authorName: req.user.name,
@@ -76,7 +82,7 @@ export class BlogController {
 
   async update(req, res, next) {
     try {
-      const post = await blogService.update(req.params.id, req.body, req.user._id);
+      const post = await writeService.update(req.params.id, req.body, req.user._id);
       res.json({ success: true, data: post });
     } catch (error) {
       next(error);
@@ -85,8 +91,8 @@ export class BlogController {
 
   async delete(req, res, next) {
     try {
-      const isAdmin = req.user.role === 'admin';
-      await blogService.delete(req.params.id, req.user._id, isAdmin);
+      const isAdmin = rbacService.hasPermission(req.user.permissions, 'blog.admin');
+      await writeService.delete(req.params.id, req.user._id, isAdmin);
       res.json({ success: true, message: 'Blog post deleted' });
     } catch (error) {
       next(error);
@@ -96,12 +102,9 @@ export class BlogController {
   // Admin endpoints
   async adminGetAll(req, res, next) {
     try {
-      const data = await blogService.adminGetAll({
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 20,
-        status: req.query.status,
-        search: req.query.search,
-      });
+      const parsed = listPostsQuerySchema.safeParse(req.query);
+      const filters = parsed.success ? parsed.data : {};
+      const data = await queryService.adminGetAll(filters);
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -110,7 +113,7 @@ export class BlogController {
 
   async adminGetById(req, res, next) {
     try {
-      const post = await blogService.getById(req.params.id);
+      const post = await queryService.getById(req.params.id);
       res.json({ success: true, data: post });
     } catch (error) {
       next(error);

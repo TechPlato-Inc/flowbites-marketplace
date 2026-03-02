@@ -49,6 +49,15 @@ export class UserManagementController {
     }
   }
 
+  async deleteUser(req, res, next) {
+    try {
+      const data = await userManagementService.deleteUser(req.params.id, req.user._id);
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getUserStats(req, res, next) {
     try {
       const data = await userManagementService.getUserStats();

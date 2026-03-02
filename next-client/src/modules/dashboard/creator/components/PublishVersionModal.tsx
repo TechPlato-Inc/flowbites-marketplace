@@ -5,6 +5,7 @@ import { Button, Modal, Input } from "@/design-system";
 import { Plus, X, GitBranch, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { showToast } from "@/design-system/Toast";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 interface PublishVersionModalProps {
   isOpen: boolean;
@@ -65,11 +66,8 @@ export function PublishVersionModal({
       showToast("Version published successfully!", "success");
       onSuccess?.();
       handleClose();
-    } catch (err: any) {
-      showToast(
-        err?.response?.data?.error || "Failed to publish version",
-        "error",
-      );
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, "Failed to publish version"), "error");
     } finally {
       setLoading(false);
     }

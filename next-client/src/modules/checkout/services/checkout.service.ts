@@ -1,8 +1,10 @@
 import { api } from "@/lib/api/client";
 
 interface CheckoutSession {
-  sessionId: string;
-  url: string;
+  sessionUrl: string;
+  orderId: string | null;
+  serviceOrderId: string | null;
+  demoMode: boolean;
 }
 
 export async function createTemplateCheckout(payload: {

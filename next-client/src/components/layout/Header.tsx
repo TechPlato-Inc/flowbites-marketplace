@@ -79,7 +79,8 @@ export function Header() {
 
   const getDashboardPath = () => {
     if (!user) return "/";
-    if (user.role === "admin") return "/dashboard/admin";
+    if (user.role === "admin" || user.role === "super_admin")
+      return "/dashboard/admin";
     if (user.role === "creator") return "/dashboard/creator";
     return "/dashboard/buyer";
   };

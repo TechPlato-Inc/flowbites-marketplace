@@ -1,14 +1,22 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { getUploadUrl } from '@/lib/api/client';
-import { useAuthStore } from '@/stores/authStore';
-import type { ServicePackage } from '@/types';
-import { Button, Badge, Modal } from '@/design-system';
-import { Clock, RotateCcw, CheckCircle, ShoppingCart, ExternalLink, AlertTriangle } from 'lucide-react';
-import { orderService } from '@/modules/services/services/services.service';
+import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { getUploadUrl } from "@/lib/api/client";
+import { useAuthStore } from "@/stores/authStore";
+import type { ServicePackage } from "@/types";
+import { Button, Badge, Modal } from "@/design-system";
+import {
+  Clock,
+  RotateCcw,
+  CheckCircle,
+  ShoppingCart,
+  ExternalLink,
+  AlertTriangle,
+} from "lucide-react";
+import { orderService } from "@/modules/services/services/services.service";
 
 interface ServiceDetailViewProps {
   service: ServicePackage;
@@ -18,27 +26,29 @@ export function ServiceDetailView({ service: pkg }: ServiceDetailViewProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
   const [showOrderModal, setShowOrderModal] = useState(false);
-  const [requirements, setRequirements] = useState('');
+  const [requirements, setRequirements] = useState("");
   const [ordering, setOrdering] = useState(false);
-  const [orderError, setOrderError] = useState('');
+  const [orderError, setOrderError] = useState("");
 
   const handleOrder = async () => {
     if (!requirements.trim()) return;
     setOrdering(true);
-    setOrderError('');
+    setOrderError("");
     try {
       const result = await orderService(pkg._id, requirements);
       window.location.href = result.sessionUrl;
     } catch (err: unknown) {
-      const msg = (err && typeof err === 'object' && 'response' in err)
-        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
-        : undefined;
-      setOrderError(msg || 'Failed to place order. Please try again.');
+      const msg =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data
+              ?.error
+          : undefined;
+      setOrderError(msg || "Failed to place order. Please try again.");
       setOrdering(false);
     }
   };
 
-  const creator = typeof pkg.creatorId === 'object' ? pkg.creatorId : null;
+  const creator = typeof pkg.creatorId === "object" ? pkg.creatorId : null;
 
   return (
     <div className="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-8">
@@ -48,14 +58,14 @@ export function ServiceDetailView({ service: pkg }: ServiceDetailViewProps) {
           {/* Title */}
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-2">
-              <Badge variant="neutral">{pkg.category.replace(/-/g, ' ')}</Badge>
+              <Badge variant="neutral">{pkg.category.replace(/-/g, " ")}</Badge>
             </div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold text-neutral-900 mb-2">
               {pkg.name}
             </h1>
             {creator && (
               <p className="text-lg text-neutral-600">
-                By{' '}
+                By{" "}
                 <Link
                   href={`/creators/${creator._id}`}
                   className="hover:text-primary-600 transition-colors"
@@ -68,18 +78,27 @@ export function ServiceDetailView({ service: pkg }: ServiceDetailViewProps) {
 
           {/* Description */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-neutral-900 mb-3">About this service</h2>
-            <p className="text-neutral-700 whitespace-pre-wrap leading-relaxed">{pkg.description}</p>
+            <h2 className="text-xl font-semibold text-neutral-900 mb-3">
+              About this service
+            </h2>
+            <p className="text-neutral-700 whitespace-pre-wrap leading-relaxed">
+              {pkg.description}
+            </p>
           </div>
 
           {/* Features */}
           {pkg.features.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-neutral-900 mb-3">What&apos;s included</h2>
+              <h2 className="text-xl font-semibold text-neutral-900 mb-3">
+                What&apos;s included
+              </h2>
               <ul className="space-y-2">
                 {pkg.features.map((feature, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <CheckCircle size={18} className="text-success mt-0.5 flex-shrink-0" />
+                    <CheckCircle
+                      size={18}
+                      className="text-success mt-0.5 flex-shrink-0"
+                    />
                     <span className="text-neutral-700">{feature}</span>
                   </li>
                 ))}
@@ -90,28 +109,44 @@ export function ServiceDetailView({ service: pkg }: ServiceDetailViewProps) {
           {/* Requirements */}
           {pkg.requirements && (
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-neutral-900 mb-3">What you&apos;ll need to provide</h2>
+              <h2 className="text-xl font-semibold text-neutral-900 mb-3">
+                What you&apos;ll need to provide
+              </h2>
               <p className="text-neutral-700">{pkg.requirements}</p>
             </div>
           )}
 
           {/* Linked Template */}
-          {pkg.templateId && typeof pkg.templateId === 'object' && (
+          {pkg.templateId && typeof pkg.templateId === "object" && (
             <div className="mb-8 p-4 border border-neutral-200 rounded-xl">
-              <h2 className="text-sm font-semibold text-neutral-500 uppercase mb-3">Based on template</h2>
+              <h2 className="text-sm font-semibold text-neutral-500 uppercase mb-3">
+                Based on template
+              </h2>
               <Link
                 href={`/templates/${pkg.templateId.slug}`}
                 className="flex items-center gap-3 hover:bg-neutral-50 -m-2 p-2 rounded-lg transition-colors"
               >
-                <div className="w-16 h-10 bg-neutral-200 rounded overflow-hidden flex-shrink-0">
+                <div className="w-16 h-10 bg-neutral-200 rounded overflow-hidden flex-shrink-0 relative">
                   {pkg.templateId.thumbnail && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={getUploadUrl(`images/${pkg.templateId.thumbnail}`)} alt="" className="w-full h-full object-cover" />
+                    <Image
+                      src={getUploadUrl(`images/${pkg.templateId.thumbnail}`)}
+                      alt=""
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                      unoptimized
+                    />
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-neutral-900">{pkg.templateId.title}</p>
-                  <p className="text-sm text-neutral-500">{pkg.templateId.price === 0 ? 'Free' : `$${pkg.templateId.price}`}</p>
+                  <p className="font-medium text-neutral-900">
+                    {pkg.templateId.title}
+                  </p>
+                  <p className="text-sm text-neutral-500">
+                    {pkg.templateId.price === 0
+                      ? "Free"
+                      : `$${pkg.templateId.price}`}
+                  </p>
                 </div>
                 <ExternalLink size={16} className="text-neutral-400" />
               </Link>
@@ -133,7 +168,10 @@ export function ServiceDetailView({ service: pkg }: ServiceDetailViewProps) {
               </div>
               <div className="flex items-center gap-2 text-neutral-600">
                 <RotateCcw size={16} />
-                <span>{pkg.revisions === 0 ? 'Unlimited' : pkg.revisions} revision{pkg.revisions !== 1 ? 's' : ''}</span>
+                <span>
+                  {pkg.revisions === 0 ? "Unlimited" : pkg.revisions} revision
+                  {pkg.revisions !== 1 ? "s" : ""}
+                </span>
               </div>
               <div className="flex items-center gap-2 text-neutral-600">
                 <CheckCircle size={16} />
@@ -147,7 +185,7 @@ export function ServiceDetailView({ service: pkg }: ServiceDetailViewProps) {
               leftIcon={<ShoppingCart size={20} />}
               onClick={() => {
                 if (!isAuthenticated) {
-                  router.push('/login');
+                  router.push("/login");
                   return;
                 }
                 setShowOrderModal(true);
@@ -162,12 +200,21 @@ export function ServiceDetailView({ service: pkg }: ServiceDetailViewProps) {
       {/* Order Modal */}
       <Modal
         isOpen={showOrderModal}
-        onClose={() => { setShowOrderModal(false); setOrderError(''); }}
+        onClose={() => {
+          setShowOrderModal(false);
+          setOrderError("");
+        }}
         title="Place Service Order"
         size="md"
         footer={
           <div className="flex gap-3">
-            <Button variant="ghost" onClick={() => { setShowOrderModal(false); setOrderError(''); }}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowOrderModal(false);
+                setOrderError("");
+              }}
+            >
               Cancel
             </Button>
             <Button
@@ -189,7 +236,8 @@ export function ServiceDetailView({ service: pkg }: ServiceDetailViewProps) {
           )}
           <div>
             <p className="text-sm text-neutral-600 mb-4">
-              Describe your project requirements so the creator can get started. Be as detailed as possible.
+              Describe your project requirements so the creator can get started.
+              Be as detailed as possible.
             </p>
             <label className="block text-sm font-medium text-neutral-700 mb-1">
               Project Requirements *
@@ -203,8 +251,14 @@ export function ServiceDetailView({ service: pkg }: ServiceDetailViewProps) {
             />
           </div>
           <div className="bg-neutral-50 rounded-lg p-3 text-sm text-neutral-600">
-            <p><strong>Delivery:</strong> {pkg.deliveryDays} day{pkg.deliveryDays > 1 ? 's' : ''}</p>
-            <p><strong>Revisions:</strong> {pkg.revisions === 0 ? 'Unlimited' : pkg.revisions}</p>
+            <p>
+              <strong>Delivery:</strong> {pkg.deliveryDays} day
+              {pkg.deliveryDays > 1 ? "s" : ""}
+            </p>
+            <p>
+              <strong>Revisions:</strong>{" "}
+              {pkg.revisions === 0 ? "Unlimited" : pkg.revisions}
+            </p>
           </div>
         </div>
       </Modal>

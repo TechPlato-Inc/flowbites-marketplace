@@ -142,10 +142,10 @@ export function createMockLicense(overrides: Partial<License> = {}): License {
     licenseKey: "LIC-ABC123XYZ",
     templateId: createMockTemplate(),
     orderId: "order-123",
-    accessCount: 0,
-    maxAccesses: 10,
+    licenseType: "personal" as const,
     downloadCount: 0,
-    maxDownloads: 5,
+    maxDownloads: 10,
+    isActive: true,
     createdAt: new Date().toISOString(),
     ...overrides,
   };

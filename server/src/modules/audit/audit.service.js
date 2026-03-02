@@ -1,5 +1,5 @@
 import { AuditLog } from './auditLog.model.js';
-import { AppError } from '../../middleware/errorHandler.js';
+import { toAuditEntryDTO } from './dto/auditEntry.dto.js';
 
 export class AuditService {
   /**
@@ -23,19 +23,20 @@ export class AuditService {
 
   /**
    * Get audit logs with filters (admin).
+   * Accepts validated query params (DTO field names) and maps them to model fields.
    */
-  async getLogs({ page = 1, limit = 50, action, adminId, targetType, startDate, endDate } = {}) {
+  async getLogs({ page = 1, limit = 50, action, userId, resource, dateFrom, dateTo } = {}) {
     const skip = (page - 1) * limit;
     const query = {};
 
     if (action) query.action = action;
-    if (adminId) query.adminId = adminId;
-    if (targetType) query.targetType = targetType;
+    if (userId) query.adminId = userId;
+    if (resource) query.targetType = resource;
 
-    if (startDate || endDate) {
+    if (dateFrom || dateTo) {
       query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
+      if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
+      if (dateTo) query.createdAt.$lte = new Date(dateTo);
     }
 
     const [logs, total] = await Promise.all([
@@ -49,7 +50,7 @@ export class AuditService {
     ]);
 
     return {
-      logs,
+      logs: logs.map(toAuditEntryDTO),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
   }
@@ -58,11 +59,13 @@ export class AuditService {
    * Get audit log for a specific target.
    */
   async getLogsForTarget(targetType, targetId) {
-    return AuditLog.find({ targetType, targetId })
+    const logs = await AuditLog.find({ targetType, targetId })
       .populate('adminId', 'name email')
       .sort({ createdAt: -1 })
       .limit(100)
       .lean();
+
+    return logs.map(toAuditEntryDTO);
   }
 
   /**

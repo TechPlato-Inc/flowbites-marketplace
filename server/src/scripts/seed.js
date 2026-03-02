@@ -1,5 +1,7 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import path from 'path';
+import fs from 'fs';
 import { User } from '../modules/users/user.model.js';
 import { CreatorProfile } from '../modules/creators/creator.model.js';
 import { Template } from '../modules/templates/template.model.js';
@@ -8,8 +10,28 @@ import { UIShot } from '../modules/ui-shorts/uiShort.model.js';
 import { Order } from '../modules/orders/order.model.js';
 import { License } from '../modules/downloads/license.model.js';
 import { ServicePackage, ServiceOrder } from '../modules/services/service.model.js';
+import { uploadToCloudinary, cloudinaryEnabled } from '../config/cloudinary.js';
 
 dotenv.config();
+
+const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+const _uploadCache = {};
+
+async function seedUpload(filename, localFolder, cloudinaryFolder) {
+  if (!filename || !cloudinaryEnabled()) return filename;
+  const key = `${localFolder}/${filename}`;
+  if (_uploadCache[key]) return _uploadCache[key];
+  const filePath = path.join(UPLOAD_DIR, localFolder, filename);
+  if (!fs.existsSync(filePath)) return filename;
+  try {
+    const result = await uploadToCloudinary(filePath, cloudinaryFolder);
+    const url = result ? result.secure_url : filename;
+    _uploadCache[key] = url;
+    return url;
+  } catch {
+    return filename;
+  }
+}
 
 const seed = async () => {
   try {
@@ -109,7 +131,7 @@ const seed = async () => {
     // Create SUPER ADMIN - has full control over everything
     const superAdmin = await User.create({
       email: 'superadmin@flowbites.com',
-      password: 'superadmin2024!',
+      password: 'Test1234!',
       name: 'Super Administrator',
       role: 'super_admin',
       isActive: true,
@@ -120,7 +142,7 @@ const seed = async () => {
     // Create Flowbites Team Admin - manages flowbites marketplace AND is also a creator
     const flowbitesAdmin = await User.create({
       email: 'admin@flowbites.com',
-      password: 'flowbites2024!',
+      password: 'Test1234!',
       name: 'Flowbites Administrator',
       role: 'admin',
       isActive: true,
@@ -158,14 +180,14 @@ const seed = async () => {
     const buyers = await User.create([
       {
         email: 'buyer1@example.com',
-        password: 'password123',
+        password: 'Test1234!',
         name: 'John Smith',
         role: 'buyer',
         emailVerified: true
       },
       {
         email: 'buyer2@example.com',
-        password: 'password123',
+        password: 'Test1234!',
         name: 'Sarah Johnson',
         role: 'buyer',
         emailVerified: true
@@ -181,14 +203,14 @@ const seed = async () => {
     const creators = await User.create([
       {
         email: 'creator1@example.com',
-        password: 'password123',
+        password: 'Test1234!',
         name: 'Alex Rivera',
         role: 'creator',
         emailVerified: true
       },
       {
         email: 'creator2@example.com',
-        password: 'password123',
+        password: 'Test1234!',
         name: 'Maria Chen',
         role: 'creator',
         emailVerified: true
@@ -543,6 +565,16 @@ const seed = async () => {
         moderatedAt: new Date('2026-01-25')
       }
     ];
+
+    // Upload template images to Cloudinary
+    if (cloudinaryEnabled()) {
+      console.log('☁️  Uploading template images to Cloudinary...');
+      for (const t of templateData) {
+        if (t.thumbnail) t.thumbnail = await seedUpload(t.thumbnail, 'images', 'flowbites/images');
+        if (t.gallery) t.gallery = await Promise.all(t.gallery.map(img => seedUpload(img, 'images', 'flowbites/gallery')));
+      }
+      console.log('✅ Template images uploaded to Cloudinary');
+    }
 
     const templates = await Template.create(templateData);
     console.log(`✅ Created ${templates.length} templates`);
@@ -929,7 +961,7 @@ const seed = async () => {
     console.log('✅ Created 5 service orders (in_progress, delivered, completed, requested, revision_requested)');
 
     // Create UI Shots
-    const shots = await UIShot.create([
+    const shotData = [
       {
         creatorId: flowbitesAdmin._id,
         title: 'Modern Dashboard Analytics View',
@@ -960,7 +992,18 @@ const seed = async () => {
         stats: { views: 423, likes: 76, saves: 31 },
         colors: ['#0891b2', '#f97316', '#fbbf24']
       }
-    ]);
+    ];
+
+    // Upload shot images to Cloudinary
+    if (cloudinaryEnabled()) {
+      console.log('☁️  Uploading shot images to Cloudinary...');
+      for (const s of shotData) {
+        if (s.image) s.image = await seedUpload(s.image, 'shots', 'flowbites/shots');
+      }
+      console.log('✅ Shot images uploaded to Cloudinary');
+    }
+
+    const shots = await UIShot.create(shotData);
     console.log(`✅ Created ${shots.length} UI shots`);
 
     // Compute and update creator stats from actual template data
@@ -984,21 +1027,15 @@ const seed = async () => {
     console.log('✅ Updated creator stats from template data');
 
     console.log('\n🎉 Database seeded successfully!');
-    console.log('\n📝 Test Credentials:');
+    console.log('\n📝 Test Credentials (all passwords: Test1234!):');
     console.log('─────────────────────────────────────────');
-    console.log('Super Admin (full system access):');
-    console.log('  Email: superadmin@flowbites.com');
-    console.log('  Password: superadmin2024!');
-    console.log('\nFlowbites Admin (marketplace admin + creator - dual role):');
-    console.log('  Email: admin@flowbites.com');
-    console.log('  Password: flowbites2024!');
-    console.log('  Note: This account can manage the marketplace AND publish official Flowbites templates');
-    console.log('\nCommunity Creators:');
-    console.log('  Creator 1: creator1@example.com / password123');
-    console.log('  Creator 2: creator2@example.com / password123');
-    console.log('\nBuyers:');
-    console.log('  Buyer 1: buyer1@example.com / password123');
-    console.log('  Buyer 2: buyer2@example.com / password123');
+    console.log('  Super Admin:  superadmin@flowbites.com');
+    console.log('  Admin:        admin@flowbites.com');
+    console.log('  Creator 1:    creator1@example.com');
+    console.log('  Creator 2:    creator2@example.com');
+    console.log('  Buyer 1:      buyer1@example.com');
+    console.log('  Buyer 2:      buyer2@example.com');
+    console.log('  Password:     Test1234!');
     console.log('─────────────────────────────────────────\n');
 
     process.exit(0);

@@ -26,6 +26,7 @@ import {
   markAllAsRead,
   markAsRead,
 } from "../services/notifications.service";
+import { useSocketStore } from "@/stores/socketStore";
 import type { Notification } from "@/types";
 import { formatRelativeDate } from "@/lib/utils/format";
 import { showToast } from "@/design-system/Toast";
@@ -59,16 +60,25 @@ export function NotificationBell() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const bellButtonRef = useRef<HTMLButtonElement>(null);
   const notificationRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  // Fetch unread count every 30 seconds
+  // WebSocket-driven unread count (real-time)
+  const {
+    unreadCount,
+    setUnreadCount,
+    latestNotification,
+    clearLatestNotification,
+    isConnected,
+  } = useSocketStore();
+
+  // Fetch initial unread count on mount, then use WebSocket for updates.
+  // Falls back to polling every 60s if WebSocket is disconnected.
   useEffect(() => {
-    const fetchUnreadCount = async () => {
+    const fetchCount = async () => {
       try {
         const count = await getUnreadCount();
         setUnreadCount(count);
@@ -77,10 +87,26 @@ export function NotificationBell() {
       }
     };
 
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchCount();
+
+    // Fallback polling only when WebSocket is disconnected (60s vs old 30s)
+    if (!isConnected) {
+      const interval = setInterval(fetchCount, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [isConnected, setUnreadCount]);
+
+  // Show toast when a new real-time notification arrives
+  useEffect(() => {
+    if (latestNotification) {
+      showToast(latestNotification.title, "success");
+      // If dropdown is open, prepend the notification to the list
+      if (isOpen) {
+        setNotifications((prev) => [latestNotification, ...prev]);
+      }
+      clearLatestNotification();
+    }
+  }, [latestNotification, isOpen, clearLatestNotification]);
 
   // Fetch notifications when dropdown opens
   useEffect(() => {
@@ -208,7 +234,7 @@ export function NotificationBell() {
           n._id === notification._id ? { ...n, read: true } : n,
         ),
       );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      setUnreadCount(Math.max(0, unreadCount - 1));
     }
 
     if (notification.link) {
@@ -228,7 +254,7 @@ export function NotificationBell() {
             n._id === notification._id ? { ...n, read: false } : n,
           ),
         );
-        setUnreadCount((prev) => prev + 1);
+        setUnreadCount(unreadCount + 1);
         showToast("Failed to mark notification as read", "error");
       }
     }

@@ -3,6 +3,7 @@ import { MessagingController } from './messaging.controller.js';
 import { authenticate } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import { upload } from '../../middleware/upload.js';
+import { cloudinaryUpload } from '../../middleware/cloudinaryUpload.js';
 import {
   createConversationSchema,
   sendMessageSchema,
@@ -26,7 +27,7 @@ router.post('/', validate(createConversationSchema), messagingController.createC
 
 // Parameterized routes
 router.get('/:id', validate(paginationSchema), messagingController.getConversation);
-router.post('/:id/messages', upload.array('attachments', 5), validate(sendMessageSchema), messagingController.sendMessage);
+router.post('/:id/messages', upload.array('attachments', 5), cloudinaryUpload, validate(sendMessageSchema), messagingController.sendMessage);
 router.patch('/:id/read', messagingController.markAsRead);
 router.delete('/:id', messagingController.deleteConversation);
 

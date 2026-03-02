@@ -1,12 +1,16 @@
-import { TicketService } from './ticket.service.js';
+import { TicketQueryService } from './ticket.queryService.js';
+import { TicketWriteService } from './ticket.writeService.js';
+import { rbacService } from '../rbac/rbac.service.js';
+import { toTicketDTO, toTicketDetailDTO } from './dto/ticket.dto.js';
 
-const ticketService = new TicketService();
+const ticketQueryService = new TicketQueryService();
+const ticketWriteService = new TicketWriteService();
 
 export class TicketController {
   async createTicket(req, res, next) {
     try {
-      const data = await ticketService.createTicket(req.user._id, req.body);
-      res.status(201).json({ success: true, data });
+      const ticket = await ticketWriteService.createTicket(req.user._id, req.body);
+      res.status(201).json({ success: true, data: toTicketDTO(ticket) });
     } catch (error) {
       next(error);
     }
@@ -14,8 +18,14 @@ export class TicketController {
 
   async getMyTickets(req, res, next) {
     try {
-      const data = await ticketService.getMyTickets(req.user._id, req.query);
-      res.json({ success: true, data });
+      const result = await ticketQueryService.getMyTickets(req.user._id, req.query);
+      res.json({
+        success: true,
+        data: {
+          tickets: result.tickets.map(toTicketDTO),
+          pagination: result.pagination,
+        },
+      });
     } catch (error) {
       next(error);
     }
@@ -23,9 +33,9 @@ export class TicketController {
 
   async getTicket(req, res, next) {
     try {
-      const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
-      const data = await ticketService.getTicket(req.params.id, req.user._id, isAdmin);
-      res.json({ success: true, data });
+      const isAdmin = rbacService.hasPermission(req.user.permissions, 'tickets.admin');
+      const ticket = await ticketQueryService.getTicket(req.params.id, req.user._id, isAdmin);
+      res.json({ success: true, data: toTicketDetailDTO(ticket) });
     } catch (error) {
       next(error);
     }
@@ -33,9 +43,9 @@ export class TicketController {
 
   async addReply(req, res, next) {
     try {
-      const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
-      const data = await ticketService.addReply(req.params.id, req.user._id, req.body, isAdmin);
-      res.json({ success: true, data });
+      const isAdmin = rbacService.hasPermission(req.user.permissions, 'tickets.admin');
+      const ticket = await ticketWriteService.addReply(req.params.id, req.user._id, req.body, isAdmin);
+      res.json({ success: true, data: toTicketDTO(ticket) });
     } catch (error) {
       next(error);
     }
@@ -43,9 +53,9 @@ export class TicketController {
 
   async closeTicket(req, res, next) {
     try {
-      const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
-      const data = await ticketService.closeTicket(req.params.id, req.user._id, isAdmin);
-      res.json({ success: true, data });
+      const isAdmin = rbacService.hasPermission(req.user.permissions, 'tickets.admin');
+      const ticket = await ticketWriteService.closeTicket(req.params.id, req.user._id, isAdmin);
+      res.json({ success: true, data: toTicketDTO(ticket) });
     } catch (error) {
       next(error);
     }
@@ -54,8 +64,14 @@ export class TicketController {
   // Admin routes
   async getAllTickets(req, res, next) {
     try {
-      const data = await ticketService.getAllTickets(req.query);
-      res.json({ success: true, data });
+      const result = await ticketQueryService.getAllTickets(req.query);
+      res.json({
+        success: true,
+        data: {
+          tickets: result.tickets.map(toTicketDTO),
+          pagination: result.pagination,
+        },
+      });
     } catch (error) {
       next(error);
     }
@@ -63,8 +79,8 @@ export class TicketController {
 
   async assignTicket(req, res, next) {
     try {
-      const data = await ticketService.assignTicket(req.params.id, req.user._id, req.body.assignToId);
-      res.json({ success: true, data });
+      const ticket = await ticketWriteService.assignTicket(req.params.id, req.user._id, req.body.assignToId);
+      res.json({ success: true, data: toTicketDTO(ticket) });
     } catch (error) {
       next(error);
     }
@@ -72,8 +88,8 @@ export class TicketController {
 
   async resolveTicket(req, res, next) {
     try {
-      const data = await ticketService.resolveTicket(req.params.id, req.user._id);
-      res.json({ success: true, data });
+      const ticket = await ticketWriteService.resolveTicket(req.params.id, req.user._id);
+      res.json({ success: true, data: toTicketDTO(ticket) });
     } catch (error) {
       next(error);
     }
@@ -81,7 +97,7 @@ export class TicketController {
 
   async getTicketStats(req, res, next) {
     try {
-      const data = await ticketService.getTicketStats();
+      const data = await ticketQueryService.getTicketStats();
       res.json({ success: true, data });
     } catch (error) {
       next(error);

@@ -6,6 +6,7 @@ import { uploadToCloudinary } from '../config/cloudinary.js';
 import { Template } from '../modules/templates/template.model.js';
 import { UIShot } from '../modules/ui-shorts/uiShort.model.js';
 import { CreatorProfile } from '../modules/creators/creator.model.js';
+import { User } from '../modules/users/user.model.js';
 
 dotenv.config();
 
@@ -125,6 +126,27 @@ async function migrateCreatorCovers() {
   }
 }
 
+async function migrateUserAvatars() {
+  const users = await User.find({ avatar: { $exists: true, $ne: null, $ne: '' } });
+  console.log(`\n🧑 Migrating ${users.length} user avatars...`);
+
+  for (const user of users) {
+    if (!user.avatar || isCloudinaryUrl(user.avatar)) {
+      console.log(`  – ${user.name} (skipped)`);
+      stats.skipped++;
+      continue;
+    }
+
+    const newAvatar = await uploadIfLocal(user.avatar, 'avatars', 'flowbites/avatars');
+    if (newAvatar !== user.avatar) {
+      user.avatar = newAvatar;
+      await user.save();
+      stats.updated++;
+      console.log(`  ✓ ${user.name}`);
+    }
+  }
+}
+
 async function main() {
   console.log('☁️  Cloudinary Migration Script');
   console.log('================================');
@@ -143,6 +165,7 @@ async function main() {
   await migrateTemplates();
   await migrateUIShots();
   await migrateCreatorCovers();
+  await migrateUserAvatars();
 
   console.log('\n================================');
   console.log('📊 Migration Summary:');

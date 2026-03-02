@@ -70,6 +70,9 @@ const orderSchema = new mongoose.Schema({
   stripePaymentIntentId: String,
   stripeChargeId: String,
 
+  // Affiliate
+  referralCode: String,
+
   // Metadata
   buyerEmail: String,
   ipAddress: String,

@@ -162,6 +162,11 @@ jobs:
           PORT: 5000
           NODE_ENV: test
 
+      - name: Wait for backend server to be ready
+        run: npx wait-on http://localhost:5000
+        env:
+          CI: true
+
       # Setup frontend
       - name: Setup Node.js for frontend
         uses: actions/setup-node@v4
@@ -207,15 +212,26 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            server/package-lock.json
+            next-client/package-lock.json
 
       - name: Install frontend dependencies
         working-directory: ./next-client
         run: npm ci
 
-      - name: Run ESLint
+      - name: Install backend dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Run ESLint (Frontend)
         working-directory: ./next-client
         run: npm run lint
 
+      - name: Run ESLint (Backend)
+        working-directory: ./server
+        run: npm run lint
   # ─────────────────────────────────────────────────────────────────────────────
   # Security Audit
   # ─────────────────────────────────────────────────────────────────────────────

@@ -38,6 +38,8 @@ export function Toast({
 
   return (
     <div
+      role="alert"
+      aria-live="assertive"
       className={`
         fixed bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg
         transition-all duration-300 transform
@@ -56,6 +58,7 @@ export function Toast({
           setIsVisible(false);
           setTimeout(() => onClose?.(), 300);
         }}
+        aria-label="Dismiss"
         className={`ml-2 ${textColor} hover:opacity-70 transition-opacity`}
       >
         <X size={16} />

@@ -13,7 +13,7 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters'],
+    minlength: [8, 'Password must be at least 8 characters'],
     select: false
   },
   name: {
@@ -24,9 +24,12 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['buyer', 'creator', 'admin', 'super_admin'],
     default: 'buyer'
   },
+  customPermissions: [{
+    type: String,
+    trim: true,
+  }],
   avatar: {
     type: String,
     default: null
@@ -60,6 +63,17 @@ const userSchema = new mongoose.Schema({
     weeklyDigest: { type: Boolean, default: false },
     newFollowerAlert: { type: Boolean, default: true }
   },
+  notificationPreferences: {
+    orders: { type: Boolean, default: true },       // order_paid, order_refunded, order_expired, payment_failed
+    templates: { type: Boolean, default: true },     // template_approved, template_rejected
+    reviews: { type: Boolean, default: true },       // review_received, review_moderated
+    services: { type: Boolean, default: true },      // service_order_update
+    social: { type: Boolean, default: true },        // new_follower
+    financial: { type: Boolean, default: true },     // withdrawal_*, refund_*
+    support: { type: Boolean, default: true },       // ticket_reply, ticket_resolved, report_resolved
+    account: { type: Boolean, default: true },       // creator_approved, creator_rejected
+    system: { type: Boolean, default: true },        // system broadcasts
+  },
   refreshTokens: [{
     token: String,
     createdAt: { type: Date, default: Date.now },
@@ -88,16 +102,30 @@ userSchema.pre('save', async function(next) {
   }
 });
 
+// Trim refreshTokens to max 5 (keep newest) before saving
+userSchema.pre('save', function(next) {
+  if (this.isModified('refreshTokens') && this.refreshTokens.length > 5) {
+    this.refreshTokens = this.refreshTokens
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0))
+      .slice(0, 5);
+  }
+  next();
+});
+
 // Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Remove sensitive data from JSON
+// Remove sensitive data from JSON, include runtime permissions
 userSchema.methods.toJSON = function() {
   const obj = this.toObject();
   delete obj.password;
   delete obj.refreshTokens;
+  // Include runtime permissions resolved by auth middleware
+  if (this.permissions) {
+    obj.permissions = this.permissions;
+  }
   return obj;
 };
 

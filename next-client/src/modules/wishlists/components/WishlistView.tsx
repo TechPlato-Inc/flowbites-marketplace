@@ -7,6 +7,7 @@ import type { WishlistItem } from "@/types";
 import { TemplateCard } from "@/modules/templates/components/TemplateCard";
 import { Button } from "@/design-system";
 import { Heart, ShoppingBag, AlertCircle } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 export function WishlistView() {
   const [items, setItems] = useState<WishlistItem[]>([]);
@@ -20,9 +21,9 @@ export function WishlistView() {
       setError(null);
       const data = await getWishlist(1, 50);
       setItems(data.items);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to fetch wishlist:", err);
-      setError(err?.response?.data?.error || "Failed to load wishlist");
+      setError(getErrorMessage(err, "Failed to load wishlist"));
     } finally {
       setLoading(false);
     }

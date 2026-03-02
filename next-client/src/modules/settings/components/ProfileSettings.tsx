@@ -5,6 +5,7 @@ import { Button, Input } from "@/design-system";
 import { User, Camera, Loader2 } from "lucide-react";
 import { api, getUploadUrl } from "@/lib/api/client";
 import { showToast } from "@/design-system/Toast";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 interface UserProfile {
   name: string;
@@ -52,11 +53,8 @@ export function ProfileSettings({
 
       showToast("Profile updated successfully", "success");
       onUpdate?.(data.data);
-    } catch (err: any) {
-      showToast(
-        err?.response?.data?.error || "Failed to update profile",
-        "error",
-      );
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, "Failed to update profile"), "error");
     } finally {
       setLoading(false);
     }
@@ -93,11 +91,8 @@ export function ProfileSettings({
 
       setFormData((prev) => ({ ...prev, avatar: data.data.avatar }));
       showToast("Avatar updated", "success");
-    } catch (err: any) {
-      showToast(
-        err?.response?.data?.error || "Failed to upload avatar",
-        "error",
-      );
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, "Failed to upload avatar"), "error");
     } finally {
       setUploadingAvatar(false);
     }

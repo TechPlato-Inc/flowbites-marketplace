@@ -13,10 +13,34 @@
       "Bash(git commit:*)",
       "Bash(npx --no-install eslint:*)",
       "Bash(npx eslint:*)",
-      "Bash(npx prettier:*)"
+      "Bash(npx prettier:*)",
+      "Bash(git push:*)",
+      "Bash(MONGODB_URI=\"mongodb+srv://flowbites:DOWcWERq941cBHWu@flowbites.kht805s.mongodb.net/flowbites-marketplace?retryWrites=true&w=majority\" JWT_ACCESS_SECRET=temp JWT_REFRESH_SECRET=temp node:*)",
+      "Bash(MONGODB_URI=\"mongodb+srv://flowbites:DOWcWERq941cBHWu@flowbites.kht805s.mongodb.net/flowbites-marketplace?retryWrites=true&w=majority\" JWT_ACCESS_SECRET=temp JWT_REFRESH_SECRET=temp npm run seed:all:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(npm ls:*)",
+      "Bash(CLOUDINARY_CLOUD_NAME=Root CLOUDINARY_API_KEY=378575838167526 CLOUDINARY_API_SECRET=vNtB-sQNBVeKl9MLzCG-4zereGo node:*)",
+      "Bash(CLOUDINARY_CLOUD_NAME=flowbites CLOUDINARY_API_KEY=378575838167526 CLOUDINARY_API_SECRET=vNtB-sQNBVeKl9MLzCG-4zereGo node:*)",
+      "Bash(CLOUDINARY_CLOUD_NAME=doh1bapxi CLOUDINARY_API_KEY=378575838167526 CLOUDINARY_API_SECRET=vNtB-sQNBVeKl9MLzCG-4zereGo node:*)",
+      "Bash(MONGODB_URI=\"mongodb+srv://flowbites:DOWcWERq941cBHWu@flowbites.kht805s.mongodb.net/flowbites-marketplace?retryWrites=true&w=majority\" node:*)",
+      "Bash(MONGODB_URI=\"mongodb+srv://flowbites:DOWcWERq941cBHWu@flowbites.kht805s.mongodb.net/flowbites-marketplace?retryWrites=true&w=majority\" node scripts/check-urls.js:*)",
+      "Bash(MONGODB_URI=\"mongodb+srv://flowbites:DOWcWERq941cBHWu@flowbites.kht805s.mongodb.net/flowbites-marketplace?retryWrites=true&w=majority\" node -e \":*)",
+      "WebFetch(domain:flowbites-marketplace.vercel.app)",
+      "Bash(MONGODB_URI=\"mongodb+srv://flowbites:DOWcWERq941cBHWu@flowbites.kht805s.mongodb.net/flowbites-marketplace?retryWrites=true&w=majority\" node scripts/update-all-urls.js:*)",
+      "Bash(dig:*)",
+      "Bash(npx concurrently:*)",
+      "Read(//dev/**)",
+      "Bash(# Check eventBus usage across modules grep -rl \"\"eventBus\\\\|EVENTS\\\\.\"\" /Users/techplatoinc/Desktop/flowbites-marketplace-main/server/src/modules/)",
+      "Bash(# Check which write services still have direct NotificationService/AuditLog calls grep -rl \"\"NotificationService\\\\|AuditLog\\\\|notificationService\\\\.\"\" /Users/techplatoinc/Desktop/flowbites-marketplace-main/server/src/modules/*/)",
+      "Bash(pkill -f \"node src/index.js\")",
+      "Bash(pkill -f \"next-server\")",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(pkill -f \"nodemon\")",
+      "Bash(open http://localhost:3000)"
     ],
     "additionalDirectories": [
-      "/tmp"
+      "/tmp",
+      "/Users/techplatoinc/.claude/projects/-Users-techplatoinc-Desktop-flowbites-marketplace-main"
     ]
   }
 }

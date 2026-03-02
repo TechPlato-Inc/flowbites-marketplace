@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { showToast } from "@/design-system/Toast";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 import type { Coupon } from "@/types";
 
 export function CouponManagement() {
@@ -130,8 +131,8 @@ export function CouponManagement() {
       setIsModalOpen(false);
       resetForm();
       fetchCoupons();
-    } catch (err: any) {
-      showToast(err?.response?.data?.error || "Failed to save coupon", "error");
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, "Failed to save coupon"), "error");
     }
   };
 

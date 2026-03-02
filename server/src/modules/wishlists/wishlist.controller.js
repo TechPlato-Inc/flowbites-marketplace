@@ -1,13 +1,17 @@
-import { WishlistService } from './wishlist.service.js';
+import { WishlistQueryService } from './wishlist.queryService.js';
+import { WishlistWriteService } from './wishlist.writeService.js';
+import { toWishlistItemDTO } from './dto/wishlistItem.dto.js';
+import { listWishlistQuerySchema } from './wishlist.validator.js';
 
-const wishlistService = new WishlistService();
+const queryService = new WishlistQueryService();
+const writeService = new WishlistWriteService();
 
 export class WishlistController {
   // POST /wishlists/:templateId — add to wishlist
   async addToWishlist(req, res, next) {
     try {
-      const item = await wishlistService.addToWishlist(req.user._id, req.params.templateId);
-      res.status(201).json({ success: true, data: item });
+      const item = await writeService.addToWishlist(req.user._id, req.params.templateId);
+      res.status(201).json({ success: true, data: toWishlistItemDTO(item) });
     } catch (error) {
       next(error);
     }
@@ -16,7 +20,7 @@ export class WishlistController {
   // DELETE /wishlists/:templateId — remove from wishlist
   async removeFromWishlist(req, res, next) {
     try {
-      const data = await wishlistService.removeFromWishlist(req.user._id, req.params.templateId);
+      const data = await writeService.removeFromWishlist(req.user._id, req.params.templateId);
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -26,11 +30,23 @@ export class WishlistController {
   // GET /wishlists — get user's wishlist
   async getWishlist(req, res, next) {
     try {
-      const data = await wishlistService.getUserWishlist(req.user._id, {
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 20,
+      const parsed = listWishlistQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid query parameters',
+          details: parsed.error.issues,
+        });
+      }
+
+      const data = await queryService.getUserWishlist(req.user._id, parsed.data);
+      res.json({
+        success: true,
+        data: {
+          items: data.items.map(toWishlistItemDTO),
+          pagination: data.pagination,
+        },
       });
-      res.json({ success: true, data });
     } catch (error) {
       next(error);
     }
@@ -39,7 +55,7 @@ export class WishlistController {
   // GET /wishlists/check/:templateId — check if wishlisted
   async isInWishlist(req, res, next) {
     try {
-      const data = await wishlistService.isInWishlist(req.user._id, req.params.templateId);
+      const data = await queryService.isInWishlist(req.user._id, req.params.templateId);
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -49,7 +65,7 @@ export class WishlistController {
   // POST /wishlists/check-bulk — check multiple templates
   async checkBulkWishlist(req, res, next) {
     try {
-      const data = await wishlistService.checkBulkWishlist(req.user._id, req.body.templateIds);
+      const data = await queryService.checkBulkWishlist(req.user._id, req.body.templateIds);
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -59,7 +75,7 @@ export class WishlistController {
   // GET /wishlists/count/:templateId — public wishlist count
   async getWishlistCount(req, res, next) {
     try {
-      const data = await wishlistService.getWishlistCount(req.params.templateId);
+      const data = await queryService.getWishlistCount(req.params.templateId);
       res.json({ success: true, data });
     } catch (error) {
       next(error);

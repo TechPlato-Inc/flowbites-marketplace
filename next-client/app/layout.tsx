@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Manrope, JetBrains_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/layout/AuthProvider";
+import { SocketProvider } from "@/providers/SocketProvider";
 import { ToastContainer } from "@/design-system/Toast";
 import "@/styles/globals.css";
 
@@ -62,8 +63,10 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>
-          {children}
-          <ToastContainer />
+          <SocketProvider>
+            {children}
+            <ToastContainer />
+          </SocketProvider>
         </AuthProvider>
       </body>
     </html>

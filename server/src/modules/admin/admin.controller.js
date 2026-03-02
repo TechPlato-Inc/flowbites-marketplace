@@ -1,11 +1,13 @@
-import { AdminService } from './admin.service.js';
+import { AdminQueryService } from './admin.queryService.js';
+import { AdminWriteService } from './admin.writeService.js';
 
-const adminService = new AdminService();
+const queryService = new AdminQueryService();
+const writeService = new AdminWriteService();
 
 export class AdminController {
   async getPendingTemplates(req, res, next) {
     try {
-      const templates = await adminService.getPendingTemplates();
+      const templates = await queryService.getPendingTemplates();
       res.json({ success: true, data: templates });
     } catch (error) {
       next(error);
@@ -14,7 +16,7 @@ export class AdminController {
 
   async approveTemplate(req, res, next) {
     try {
-      const template = await adminService.approveTemplate(req.params.id, req.user._id);
+      const template = await writeService.approveTemplate(req.params.id, req.user._id);
       res.json({ success: true, data: template });
     } catch (error) {
       next(error);
@@ -24,7 +26,7 @@ export class AdminController {
   async rejectTemplate(req, res, next) {
     try {
       const { reason } = req.body;
-      const template = await adminService.rejectTemplate(req.params.id, req.user._id, reason);
+      const template = await writeService.rejectTemplate(req.params.id, req.user._id, reason);
       res.json({ success: true, data: template });
     } catch (error) {
       next(error);
@@ -33,7 +35,7 @@ export class AdminController {
 
   async getAllTemplates(req, res, next) {
     try {
-      const result = await adminService.getAllTemplates(req.query);
+      const result = await queryService.getAllTemplates(req.query);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -42,7 +44,7 @@ export class AdminController {
 
   async getTemplateById(req, res, next) {
     try {
-      const template = await adminService.getTemplateById(req.params.id);
+      const template = await queryService.getTemplateById(req.params.id);
       res.json({ success: true, data: template });
     } catch (error) {
       next(error);
@@ -51,7 +53,7 @@ export class AdminController {
 
   async updateTemplate(req, res, next) {
     try {
-      const template = await adminService.updateTemplate(req.params.id, req.user._id, req.body);
+      const template = await writeService.updateTemplate(req.params.id, req.user._id, req.body);
       res.json({ success: true, data: template });
     } catch (error) {
       next(error);
@@ -60,7 +62,7 @@ export class AdminController {
 
   async deleteTemplate(req, res, next) {
     try {
-      const result = await adminService.deleteTemplate(req.params.id);
+      const result = await writeService.deleteTemplate(req.params.id, req.user._id);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -70,7 +72,7 @@ export class AdminController {
   async bulkAction(req, res, next) {
     try {
       const { action, templateIds, reason } = req.body;
-      const result = await adminService.bulkAction(action, templateIds, req.user._id, reason);
+      const result = await writeService.bulkAction(action, templateIds, req.user._id, reason);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -79,7 +81,7 @@ export class AdminController {
 
   async getStats(req, res, next) {
     try {
-      const stats = await adminService.getTemplateStats();
+      const stats = await queryService.getTemplateStats();
       res.json({ success: true, data: stats });
     } catch (error) {
       next(error);
@@ -88,7 +90,7 @@ export class AdminController {
 
   async exportTemplates(req, res, next) {
     try {
-      const csv = await adminService.exportTemplates(req.query);
+      const csv = await queryService.exportTemplates(req.query);
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=templates-export.csv');
       res.send(csv);
@@ -101,7 +103,7 @@ export class AdminController {
 
   async getPendingCreators(req, res, next) {
     try {
-      const creators = await adminService.getPendingCreators();
+      const creators = await queryService.getPendingCreators();
       res.json({ success: true, data: creators });
     } catch (error) {
       next(error);
@@ -110,7 +112,7 @@ export class AdminController {
 
   async getAllCreators(req, res, next) {
     try {
-      const result = await adminService.getAllCreators(req.query);
+      const result = await queryService.getAllCreators(req.query);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -119,7 +121,7 @@ export class AdminController {
 
   async getCreatorById(req, res, next) {
     try {
-      const creator = await adminService.getCreatorById(req.params.id);
+      const creator = await queryService.getCreatorById(req.params.id);
       res.json({ success: true, data: creator });
     } catch (error) {
       next(error);
@@ -128,7 +130,7 @@ export class AdminController {
 
   async approveCreator(req, res, next) {
     try {
-      const creator = await adminService.approveCreator(req.params.id, req.user._id);
+      const creator = await writeService.approveCreator(req.params.id, req.user._id);
       res.json({ success: true, data: creator });
     } catch (error) {
       next(error);
@@ -138,7 +140,7 @@ export class AdminController {
   async rejectCreator(req, res, next) {
     try {
       const { reason } = req.body;
-      const creator = await adminService.rejectCreator(req.params.id, req.user._id, reason);
+      const creator = await writeService.rejectCreator(req.params.id, req.user._id, reason);
       res.json({ success: true, data: creator });
     } catch (error) {
       next(error);
@@ -147,7 +149,7 @@ export class AdminController {
 
   async updateCategory(req, res, next) {
     try {
-      const category = await adminService.updateCategory(req.params.id, req.body);
+      const category = await writeService.updateCategory(req.params.id, req.body);
       res.json({ success: true, data: category });
     } catch (error) {
       next(error);
@@ -156,7 +158,7 @@ export class AdminController {
 
   async deleteCategory(req, res, next) {
     try {
-      const result = await adminService.deleteCategory(req.params.id);
+      const result = await writeService.deleteCategory(req.params.id);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -165,7 +167,7 @@ export class AdminController {
 
   async getDashboardStats(req, res, next) {
     try {
-      const stats = await adminService.getDashboardStats();
+      const stats = await queryService.getDashboardStats();
       res.json({ success: true, data: stats });
     } catch (error) {
       next(error);
@@ -174,7 +176,7 @@ export class AdminController {
 
   async reorderCategories(req, res, next) {
     try {
-      const result = await adminService.reorderCategories(req.body.categories);
+      const result = await writeService.reorderCategories(req.body.categories);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);

@@ -1,21 +1,23 @@
-import { CreatorService } from './creator.service.js';
+import { CreatorQueryService } from './creator.queryService.js';
+import { CreatorWriteService } from './creator.writeService.js';
+import { listCreatorsQuerySchema, submitOnboardingSchema } from './creator.validator.js';
 import {
   createConnectAccount,
   getConnectStatus as getStripeConnectStatus,
   getStripeDashboardLink,
 } from '../../services/stripeConnect.js';
 
-const creatorService = new CreatorService();
+const queryService = new CreatorQueryService();
+const writeService = new CreatorWriteService();
 
 export class CreatorController {
   async getAll(req, res, next) {
     try {
-      const data = await creatorService.getAll({
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 24,
-        q: req.query.q,
-        sort: req.query.sort,
-      });
+      const parsed = listCreatorsQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ success: false, error: 'Invalid query parameters', details: parsed.error.issues });
+      }
+      const data = await queryService.getAll(parsed.data);
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -24,19 +26,20 @@ export class CreatorController {
 
   async getPublicProfile(req, res, next) {
     try {
-      const profile = await creatorService.getPublicProfile(req.params.identifier);
+      const profile = await queryService.getPublicProfile(req.params.identifier);
 
       // Also fetch templates, shots, services in parallel
+      const userId = profile.userId;
       const [templatesData, shotsData, services] = await Promise.all([
-        creatorService.getCreatorTemplates(profile.userId._id, {
+        queryService.getCreatorTemplates(userId, {
           page: parseInt(req.query.templatesPage) || 1,
           limit: parseInt(req.query.templatesLimit) || 12,
         }),
-        creatorService.getCreatorShots(profile.userId._id, {
+        queryService.getCreatorShots(userId, {
           page: parseInt(req.query.shotsPage) || 1,
           limit: parseInt(req.query.shotsLimit) || 12,
         }),
-        creatorService.getCreatorServices(profile.userId._id),
+        queryService.getCreatorServices(userId),
       ]);
 
       res.json({
@@ -57,8 +60,8 @@ export class CreatorController {
 
   async getCreatorTemplates(req, res, next) {
     try {
-      const profile = await creatorService.getPublicProfile(req.params.identifier);
-      const data = await creatorService.getCreatorTemplates(profile.userId._id, {
+      const profile = await queryService.getPublicProfile(req.params.identifier);
+      const data = await queryService.getCreatorTemplates(profile.userId, {
         page: parseInt(req.query.page) || 1,
         limit: parseInt(req.query.limit) || 12,
       });
@@ -71,8 +74,8 @@ export class CreatorController {
 
   async getCreatorShots(req, res, next) {
     try {
-      const profile = await creatorService.getPublicProfile(req.params.identifier);
-      const data = await creatorService.getCreatorShots(profile.userId._id, {
+      const profile = await queryService.getPublicProfile(req.params.identifier);
+      const data = await queryService.getCreatorShots(profile.userId, {
         page: parseInt(req.query.page) || 1,
         limit: parseInt(req.query.limit) || 12,
       });
@@ -86,7 +89,7 @@ export class CreatorController {
   // Onboarding endpoints
   async getOnboardingStatus(req, res, next) {
     try {
-      const data = await creatorService.getOnboardingStatus(req.user._id);
+      const data = await queryService.getOnboardingStatus(req.user._id);
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -95,7 +98,11 @@ export class CreatorController {
 
   async savePersonalInfo(req, res, next) {
     try {
-      const data = await creatorService.savePersonalInfo(req.user._id, req.body);
+      const parsed = submitOnboardingSchema.safeParse({ body: req.body });
+      if (!parsed.success) {
+        return res.status(400).json({ success: false, error: 'Invalid onboarding data', details: parsed.error.issues });
+      }
+      const data = await writeService.savePersonalInfo(req.user._id, parsed.data.body);
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -104,7 +111,7 @@ export class CreatorController {
 
   async saveGovernmentId(req, res, next) {
     try {
-      const data = await creatorService.saveGovernmentId(req.user._id, req.body, req.files || {});
+      const data = await writeService.saveGovernmentId(req.user._id, req.body, req.files || {});
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -113,7 +120,7 @@ export class CreatorController {
 
   async saveSelfieVerification(req, res, next) {
     try {
-      const data = await creatorService.saveSelfieVerification(req.user._id, req.files || {});
+      const data = await writeService.saveSelfieVerification(req.user._id, req.files || {});
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -122,7 +129,7 @@ export class CreatorController {
 
   async saveBankDetails(req, res, next) {
     try {
-      const data = await creatorService.saveBankDetails(req.user._id, req.body);
+      const data = await writeService.saveBankDetails(req.user._id, req.body);
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -131,7 +138,7 @@ export class CreatorController {
 
   async saveCreatorReference(req, res, next) {
     try {
-      const data = await creatorService.saveCreatorReference(req.user._id, req.body);
+      const data = await writeService.saveCreatorReference(req.user._id, req.body);
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -140,7 +147,7 @@ export class CreatorController {
 
   async submitOnboarding(req, res, next) {
     try {
-      const data = await creatorService.submitOnboarding(req.user._id);
+      const data = await writeService.submitOnboarding(req.user._id);
       res.json({ success: true, data });
     } catch (error) {
       next(error);
@@ -149,7 +156,7 @@ export class CreatorController {
 
   async searchCreators(req, res, next) {
     try {
-      const data = await creatorService.searchCreators(req.query.q || '', req.user._id);
+      const data = await queryService.searchCreators(req.query.q || '', req.user._id);
       res.json({ success: true, data });
     } catch (error) {
       next(error);

@@ -87,13 +87,26 @@ export class EarningsService {
     const totalWithdrawn = withdrawnAgg[0]?.total || 0;
     const availableBalance = Math.max(0, totalEarnings - totalWithdrawn);
 
+    // Derive thisMonthEarnings and lastMonthEarnings from breakdown
+    const thisMonthEarnings = monthlyEarnings.length > 0 ? monthlyEarnings[monthlyEarnings.length - 1].earnings : 0;
+    const lastMonthEarnings = monthlyEarnings.length > 1 ? monthlyEarnings[monthlyEarnings.length - 2].earnings : 0;
+
+    // Map to frontend-expected field names
+    const monthlyBreakdown = monthlyEarnings.map(m => ({
+      month: m.month,
+      earnings: m.earnings,
+      orderCount: m.sales,
+    }));
+
     return {
       totalEarnings: Math.round(totalEarnings * 100) / 100,
+      thisMonthEarnings,
+      lastMonthEarnings,
       totalPlatformFees: Math.round(totalPlatformFees * 100) / 100,
       totalSales,
       totalWithdrawn: Math.round(totalWithdrawn * 100) / 100,
       availableBalance: Math.round(availableBalance * 100) / 100,
-      monthlyEarnings,
+      monthlyBreakdown,
       topTemplates,
     };
   }

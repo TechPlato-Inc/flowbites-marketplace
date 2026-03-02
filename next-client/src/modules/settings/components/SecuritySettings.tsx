@@ -5,6 +5,7 @@ import { Button, Input, Modal } from "@/design-system";
 import { Lock, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { showToast } from "@/design-system/Toast";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 export function SecuritySettings() {
   const [passwordForm, setPasswordForm] = useState({
@@ -56,11 +57,8 @@ export function SecuritySettings() {
         newPassword: "",
         confirmPassword: "",
       });
-    } catch (err: any) {
-      showToast(
-        err?.response?.data?.error || "Failed to change password",
-        "error",
-      );
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, "Failed to change password"), "error");
     } finally {
       setChangingPassword(false);
     }
@@ -83,11 +81,8 @@ export function SecuritySettings() {
       setTimeout(() => {
         window.location.href = "/";
       }, 2000);
-    } catch (err: any) {
-      showToast(
-        err?.response?.data?.error || "Failed to deactivate account",
-        "error",
-      );
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, "Failed to deactivate account"), "error");
       setDeactivating(false);
     }
   };

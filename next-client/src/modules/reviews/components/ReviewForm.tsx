@@ -6,6 +6,7 @@ import { StarRating } from "./StarRating";
 import { submitReview } from "../services/reviews.service";
 import { CheckCircle } from "lucide-react";
 import { showToast } from "@/design-system/Toast";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 interface ReviewFormProps {
   templateId: string;
@@ -47,10 +48,9 @@ export function ReviewForm({ templateId, onSuccess }: ReviewFormProps) {
       setSuccess(true);
       showToast("Review submitted successfully!", "success");
       onSuccess?.();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err?.response?.data?.error ||
-          "Failed to submit review. Please try again.",
+        getErrorMessage(err, "Failed to submit review. Please try again."),
       );
     } finally {
       setSubmitting(false);

@@ -4,6 +4,7 @@ import { AppError } from '../../middleware/errorHandler.js';
 import { AuditLog } from '../audit/auditLog.model.js';
 import { NotificationService } from '../notifications/notification.service.js';
 import { sendTicketReply } from '../../services/email.js';
+import { eventBus, EVENTS } from '../../shared/eventBus.js';
 
 const notificationService = new NotificationService();
 
@@ -22,6 +23,13 @@ export class TicketService {
         message,
         isStaffReply: false,
       }],
+    });
+
+    eventBus.emit(EVENTS.TICKET_CREATED, {
+      ticketId: ticket._id,
+      userId,
+      subject,
+      category,
     });
 
     return ticket;
@@ -57,7 +65,7 @@ export class TicketService {
   async getTicket(ticketId, userId, isAdmin = false) {
     const ticket = await Ticket.findById(ticketId)
       .populate('userId', 'name email avatar')
-      .populate('messages.senderId', 'name avatar')
+      .populate('messages.senderId', 'name avatar role')
       .populate('assignedTo', 'name')
       .lean();
 
@@ -173,6 +181,12 @@ export class TicketService {
     ticket.resolvedAt = new Date();
     await ticket.save();
 
+    eventBus.emit(EVENTS.TICKET_RESOLVED, {
+      ticketId: ticket._id,
+      userId: ticket.userId,
+      resolvedBy: adminId,
+    });
+
     AuditLog.create({
       adminId,
       action: 'ticket_resolved',
@@ -201,6 +215,12 @@ export class TicketService {
     ticket.status = 'closed';
     ticket.closedAt = new Date();
     await ticket.save();
+
+    eventBus.emit(EVENTS.TICKET_RESOLVED, {
+      ticketId: ticket._id,
+      userId: ticket.userId,
+      resolvedBy: userId,
+    });
 
     return ticket;
   }

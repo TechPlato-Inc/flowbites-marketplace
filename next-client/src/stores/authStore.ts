@@ -27,8 +27,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
     // Server sets httpOnly cookies cross-origin; set marker cookies on this domain for middleware
-    document.cookie = `accessToken=1; path=/; max-age=900; secure; samesite=lax`;
-    document.cookie = `userRole=${data.data.user.role}; path=/; max-age=900; secure; samesite=lax`;
+    const secure = window.location.protocol === "https:" ? "secure;" : "";
+    document.cookie = `accessToken=1; path=/; max-age=900; ${secure} samesite=lax`;
+    document.cookie = `userRole=${data.data.user.role}; path=/; max-age=900; ${secure} samesite=lax`;
     set({ user: data.data.user, isAuthenticated: true });
   },
 
@@ -40,8 +41,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       role,
     });
     // Server sets httpOnly cookies cross-origin; set marker cookies on this domain for middleware
-    document.cookie = `accessToken=1; path=/; max-age=900; secure; samesite=lax`;
-    document.cookie = `userRole=${data.data.user.role}; path=/; max-age=900; secure; samesite=lax`;
+    const secure = window.location.protocol === "https:" ? "secure;" : "";
+    document.cookie = `accessToken=1; path=/; max-age=900; ${secure} samesite=lax`;
+    document.cookie = `userRole=${data.data.user.role}; path=/; max-age=900; ${secure} samesite=lax`;
     set({ user: data.data.user, isAuthenticated: true });
   },
 
@@ -69,8 +71,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       // httpOnly accessToken cookie is sent automatically via withCredentials
       const { data } = await api.get("/auth/me");
       // Refresh marker cookies on this domain
-      document.cookie = `accessToken=1; path=/; max-age=900; secure; samesite=lax`;
-      document.cookie = `userRole=${data.data.user.role}; path=/; max-age=900; secure; samesite=lax`;
+      const secure = window.location.protocol === "https:" ? "secure;" : "";
+      document.cookie = `accessToken=1; path=/; max-age=900; ${secure} samesite=lax`;
+      document.cookie = `userRole=${data.data.user.role}; path=/; max-age=900; ${secure} samesite=lax`;
       set({ user: data.data.user, isAuthenticated: true, isLoading: false });
     } catch (error) {
       // No valid session — clear stale marker cookies

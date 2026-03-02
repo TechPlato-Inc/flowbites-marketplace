@@ -57,7 +57,7 @@ type TemplateFilter = "all" | "approved" | "pending" | "draft" | "rejected";
 interface ChangeLogEntry {
   editedAt: string;
   editedBy: string;
-  changes: { field: string; oldValue: any; newValue: any }[];
+  changes: { field: string; oldValue: unknown; newValue: unknown }[];
   reason: string;
 }
 
@@ -1197,34 +1197,46 @@ export const CreatorDashboardView = () => {
                   Change History
                 </h3>
                 <div className="space-y-3 max-h-48 overflow-y-auto">
-                  {editingTemplate.changeLog.map((entry: any, idx: number) => (
-                    <div
-                      key={idx}
-                      className="bg-white p-3 rounded-lg border border-neutral-200"
-                    >
-                      <p className="text-xs text-neutral-500 mb-1">
-                        {new Date(entry.editedAt).toLocaleString()} ·{" "}
-                        {entry.reason}
-                      </p>
-                      <div className="space-y-1">
-                        {(entry.changes ?? []).map(
-                          (change: any, cidx: number) => (
-                            <p key={cidx} className="text-sm text-neutral-700">
-                              <span className="font-medium">
-                                {change.field}:
-                              </span>{" "}
-                              <span className="text-red-500 line-through">
-                                {String(change.oldValue)}
-                              </span>{" "}
-                              <span className="text-green-600">
-                                → {String(change.newValue)}
-                              </span>
-                            </p>
-                          ),
-                        )}
+                  {editingTemplate.changeLog.map(
+                    (entry: ChangeLogEntry, idx: number) => (
+                      <div
+                        key={idx}
+                        className="bg-white p-3 rounded-lg border border-neutral-200"
+                      >
+                        <p className="text-xs text-neutral-500 mb-1">
+                          {new Date(entry.editedAt).toLocaleString()} ·{" "}
+                          {entry.reason}
+                        </p>
+                        <div className="space-y-1">
+                          {(entry.changes ?? []).map(
+                            (
+                              change: {
+                                field: string;
+                                oldValue: unknown;
+                                newValue: unknown;
+                              },
+                              cidx: number,
+                            ) => (
+                              <p
+                                key={cidx}
+                                className="text-sm text-neutral-700"
+                              >
+                                <span className="font-medium">
+                                  {change.field}:
+                                </span>{" "}
+                                <span className="text-red-500 line-through">
+                                  {String(change.oldValue)}
+                                </span>{" "}
+                                <span className="text-green-600">
+                                  → {String(change.newValue)}
+                                </span>
+                              </p>
+                            ),
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
               </div>
             )}

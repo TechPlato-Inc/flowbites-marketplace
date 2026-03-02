@@ -34,6 +34,8 @@ import {
   Users,
 } from "lucide-react";
 import { NewMessageModal } from "./NewMessageModal";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
+import axios from "axios";
 
 function useMessagesNavItems(): {
   navItems: NavItem[];
@@ -199,9 +201,9 @@ export function ConversationList() {
       const data = await getConversations();
       setConversations(data);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // If the backend endpoint doesn't exist yet (404), show empty state
-      if (err?.response?.status === 404) {
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
         setConversations([]);
         setError(null);
       } else {

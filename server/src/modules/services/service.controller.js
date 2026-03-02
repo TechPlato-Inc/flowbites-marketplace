@@ -1,11 +1,21 @@
 import { ServiceService } from './service.service.js';
+import { ServiceQueryService } from './service.queryService.js';
+import { ServiceWriteService } from './service.writeService.js';
+import { rbacService } from '../rbac/rbac.service.js';
+import { createServicePackageSchema, listServicesQuerySchema, updateServicePackageSchema } from './service.validator.js';
 
 const serviceService = new ServiceService();
+const queryService = new ServiceQueryService();
+const writeService = new ServiceWriteService();
 
 export class ServiceController {
   async createPackage(req, res, next) {
     try {
-      const pkg = await serviceService.createPackage(req.user._id, req.body);
+      const parsed = createServicePackageSchema.safeParse({ body: req.body });
+      if (!parsed.success) {
+        return res.status(400).json({ success: false, error: 'Invalid request body', details: parsed.error.issues });
+      }
+      const pkg = await writeService.create(req.user._id, parsed.data.body);
       res.status(201).json({ success: true, data: pkg });
     } catch (error) {
       next(error);
@@ -14,7 +24,11 @@ export class ServiceController {
 
   async getAllPackages(req, res, next) {
     try {
-      const result = await serviceService.getAllPackages(req.query);
+      const parsed = listServicesQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ success: false, error: 'Invalid query parameters', details: parsed.error.issues });
+      }
+      const result = await queryService.browse(parsed.data);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -23,7 +37,7 @@ export class ServiceController {
 
   async getPackageBySlug(req, res, next) {
     try {
-      const pkg = await serviceService.getPackageBySlug(req.params.slug);
+      const pkg = await queryService.getBySlug(req.params.slug);
       res.json({ success: true, data: pkg });
     } catch (error) {
       next(error);
@@ -33,7 +47,7 @@ export class ServiceController {
   async getPackages(req, res, next) {
     try {
       const { templateId } = req.query;
-      const packages = await serviceService.getPackagesByTemplate(templateId);
+      const packages = await queryService.getByTemplate(templateId);
       res.json({ success: true, data: packages });
     } catch (error) {
       next(error);
@@ -42,12 +56,38 @@ export class ServiceController {
 
   async getCreatorPackages(req, res, next) {
     try {
-      const packages = await serviceService.getCreatorPackages(req.user._id);
+      const packages = await queryService.getByCreator(req.user._id);
       res.json({ success: true, data: packages });
     } catch (error) {
       next(error);
     }
   }
+
+  async updatePackage(req, res, next) {
+    try {
+      const parsed = updateServicePackageSchema.safeParse({ body: req.body });
+      if (!parsed.success) {
+        return res.status(400).json({ success: false, error: 'Invalid request body', details: parsed.error.issues });
+      }
+      const pkg = await writeService.update(req.params.id, req.user._id, parsed.data.body);
+      res.json({ success: true, data: pkg });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deletePackage(req, res, next) {
+    try {
+      const result = await writeService.delete(req.params.id, req.user._id);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Order operations (delegated to the existing ServiceService)
+  // ---------------------------------------------------------------------------
 
   async createOrder(req, res, next) {
     try {
@@ -101,7 +141,7 @@ export class ServiceController {
   async getMyOrders(req, res, next) {
     try {
       let orders;
-      if (req.user.role === 'creator' || req.user.role === 'admin') {
+      if (rbacService.hasPermission(req.user.permissions, 'services.manage')) {
         orders = await serviceService.getCreatorOrders(req.user._id, req.query.status);
       } else {
         orders = await serviceService.getBuyerOrders(req.user._id);
@@ -112,7 +152,7 @@ export class ServiceController {
     }
   }
 
-  // Generic customization request (buyer → Flowbites admin)
+  // Generic customization request (buyer -> Flowbites admin)
   async requestCustomization(req, res, next) {
     try {
       const { templateId, requirements, attachments } = req.body;

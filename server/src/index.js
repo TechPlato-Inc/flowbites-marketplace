@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -14,6 +15,9 @@ import { validateEnv } from './config/validateEnv.js';
 import { mongoSanitize } from './middleware/sanitize.js';
 import { csrfProtection } from './middleware/csrf.js';
 import { startCleanupScheduler } from './jobs/cleanup.js';
+import { initializeSocket } from './websocket/socket.js';
+import logger from './lib/logger.js';
+import { requestLogger } from './middleware/requestLogger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,7 +45,7 @@ import couponRoutes from './modules/coupons/coupon.routes.js';
 import followerRoutes from './modules/followers/follower.routes.js';
 import templateVersionRoutes from './modules/templates/templateVersion.routes.js';
 import earningsRoutes from './modules/creators/earnings.routes.js';
-import searchRoutes from './modules/templates/search.routes.js';
+import searchRoutes from './modules/search/search.routes.js';
 import settingsRoutes from './modules/users/settings.routes.js';
 import userManagementRoutes from './modules/admin/userManagement.routes.js';
 import reportRoutes from './modules/reports/report.routes.js';
@@ -49,6 +53,9 @@ import auditRoutes from './modules/audit/audit.routes.js';
 import withdrawalRoutes from './modules/withdrawals/withdrawal.routes.js';
 import ticketRoutes from './modules/tickets/ticket.routes.js';
 import conversationRoutes from './modules/messaging/messaging.routes.js';
+import affiliateRoutes from './modules/affiliates/affiliate.routes.js';
+import rbacRoutes from './modules/rbac/rbac.routes.js';
+import { seedDefaultRoles } from './modules/rbac/seed.js';
 
 // Load .env only for local development — on Railway/production, env vars are injected by the platform
 if (!process.env.MONGODB_URI) {
@@ -61,8 +68,14 @@ validateEnv();
 // Initialize Express app
 const app = express();
 
-// Connect to database
-connectDB();
+// Connect to database, seed default RBAC roles, and register event listeners
+connectDB().then(async () => {
+  await seedDefaultRoles();
+  // Register domain event listeners (side-effect imports)
+  await import('./modules/notifications/notification.listener.js');
+  await import('./modules/analytics/analytics.listener.js');
+  await import('./modules/audit/audit.listener.js');
+}).catch(() => {});
 
 // Security middleware
 app.use(helmet({
@@ -124,9 +137,11 @@ app.use(compression());
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
+app.use(requestLogger);
 
-// Static files (uploads)
-app.use('/uploads', express.static('uploads'));
+// Static files — only templates (ZIPs) and documents (KYC); images served from Cloudinary
+app.use('/uploads/templates', express.static('uploads/templates'));
+app.use('/uploads/documents', express.static('uploads/documents'));
 
 // Health check
 app.get('/health', (req, res) => {
@@ -163,6 +178,8 @@ app.use('/api/admin/audit', auditRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/conversations', conversationRoutes);
+app.use('/api/affiliates', affiliateRoutes);
+app.use('/api/rbac', rbacRoutes);
 
 // ---------------------------------------------------------------------------
 // SPA fallback (only when a built client exists in /public)
@@ -191,12 +208,18 @@ if (hasPublicIndex) {
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
-// Start server
+// Start server with HTTP + WebSocket
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-  console.log(`📍 API: http://localhost:${PORT}/api`);
-  console.log(`💚 Health check: http://localhost:${PORT}/health`);
+const httpServer = http.createServer(app);
+
+// Initialize Socket.IO on the HTTP server
+const io = initializeSocket(httpServer);
+
+const server = httpServer.listen(PORT, () => {
+  logger.info({ port: PORT, env: process.env.NODE_ENV }, 'Server running');
+  logger.info({ url: `http://localhost:${PORT}/api` }, 'API endpoint');
+  logger.info({ url: `ws://localhost:${PORT}` }, 'WebSocket endpoint');
+  logger.info({ url: `http://localhost:${PORT}/health` }, 'Health check endpoint');
 });
 
 // Start background cleanup cron jobs
@@ -206,22 +229,22 @@ const cleanupTimer = startCleanupScheduler();
 import mongoose from 'mongoose';
 
 function gracefulShutdown(signal) {
-  console.log(`\n${signal} received. Shutting down gracefully...`);
+  logger.info({ signal }, 'Shutdown signal received, shutting down gracefully');
   clearInterval(cleanupTimer);
   server.close(async () => {
-    console.log('✅ HTTP server closed');
+    logger.info('HTTP server closed');
     try {
       await mongoose.connection.close();
-      console.log('✅ MongoDB connection closed');
+      logger.info('MongoDB connection closed');
     } catch (err) {
-      console.error('Error closing MongoDB:', err);
+      logger.error({ err }, 'Error closing MongoDB');
     }
     process.exit(0);
   });
 
   // Force exit after 10s if graceful shutdown fails
   setTimeout(() => {
-    console.error('Forced shutdown after timeout');
+    logger.error('Forced shutdown after timeout');
     process.exit(1);
   }, 10000);
 }

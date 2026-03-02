@@ -1,70 +1,53 @@
-import { AnalyticsEvent } from './analytics.model.js';
+import { AnalyticsQueryService } from './analytics.queryService.js';
+import { AnalyticsWriteService } from './analytics.writeService.js';
 
+/**
+ * Backwards-compatible facade.
+ *
+ * External modules (controller, listener, etc.) import AnalyticsService and
+ * call methods such as trackEvent() or getCreatorAnalytics().  This class
+ * delegates every call to either AnalyticsQueryService or AnalyticsWriteService
+ * so the existing call-sites keep working without any changes.
+ */
 export class AnalyticsService {
-  async trackEvent(eventName, userId, metadata = {}, context = {}) {
-    const event = await AnalyticsEvent.create({
-      eventName,
-      userId,
-      metadata,
-      page: context.page,
-      userAgent: context.userAgent,
-      ipAddress: context.ipAddress,
-      anonymousId: context.anonymousId
-    });
-
-    return event;
+  constructor() {
+    this._query = new AnalyticsQueryService();
+    this._write = new AnalyticsWriteService();
   }
 
-  async getEvents(filters = {}) {
-    const { eventName, userId, startDate, endDate, limit = 100 } = filters;
+  // ─── Write operations (delegated to writeService) ─────────────────────────
 
-    const query = {};
-
-    if (eventName) query.eventName = eventName;
-    if (userId) query.userId = userId;
-
-    if (startDate || endDate) {
-      query.timestamp = {};
-      if (startDate) query.timestamp.$gte = new Date(startDate);
-      if (endDate) query.timestamp.$lte = new Date(endDate);
-    }
-
-    const events = await AnalyticsEvent.find(query)
-      .sort({ timestamp: -1 })
-      .limit(limit);
-
-    return events;
+  trackEvent(eventName, userId, metadata, context) {
+    return this._write.trackEvent(eventName, userId, metadata, context);
   }
 
-  async getFunnelMetrics(startDate, endDate) {
-    const match = {
-      timestamp: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      }
-    };
+  // ─── Read operations (delegated to queryService) ──────────────────────────
 
-    const events = await AnalyticsEvent.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: '$eventName',
-          count: { $sum: 1 }
-        }
-      }
-    ]);
+  getEvents(filters) {
+    return this._query.getEvents(filters);
+  }
 
-    const metrics = {};
-    events.forEach(e => {
-      metrics[e._id] = e.count;
-    });
+  getFunnelMetrics(startDate, endDate) {
+    return this._query.getFunnelMetrics(startDate, endDate);
+  }
 
-    return {
-      view_template: metrics.view_template || 0,
-      purchase_start: metrics.purchase_start || 0,
-      purchase_success: metrics.purchase_success || 0,
-      download: metrics.download || 0,
-      service_request: metrics.service_request || 0
-    };
+  getCreatorAnalytics(userId, opts) {
+    return this._query.getCreatorAnalytics(userId, opts);
+  }
+
+  getTemplateAnalytics(templateId, opts) {
+    return this._query.getTemplateAnalytics(templateId, opts);
+  }
+
+  getRealtimeAnalytics(userId) {
+    return this._query.getRealtimeAnalytics(userId);
+  }
+
+  exportAnalytics(userId, opts) {
+    return this._query.exportAnalytics(userId, opts);
+  }
+
+  getAnalyticsComparison(userId, opts) {
+    return this._query.getAnalyticsComparison(userId, opts);
   }
 }

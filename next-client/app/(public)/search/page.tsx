@@ -13,6 +13,7 @@ import {
   Users,
   ArrowRight,
 } from "lucide-react";
+import { SearchSuggestions } from "@/modules/templates/components/SearchSuggestions";
 
 interface SearchResult {
   templates: {
@@ -89,8 +90,8 @@ function SearchResultsContent() {
 
   if (!query) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-[60vh]">
+        <div className="text-center mb-12">
           <Search size={48} className="text-neutral-300 mx-auto mb-4" />
           <h1 className="text-2xl font-display font-bold text-neutral-900 mb-2">
             Search
@@ -99,6 +100,7 @@ function SearchResultsContent() {
             Enter a search term to find templates, services, and creators
           </p>
         </div>
+        <SearchSuggestions />
       </div>
     );
   }

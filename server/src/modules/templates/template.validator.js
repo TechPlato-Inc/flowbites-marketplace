@@ -16,6 +16,21 @@ export const createTemplateSchema = z.object({
   })
 });
 
+export const listTemplatesQuerySchema = z.object({
+  q: z.string().max(200).optional(),
+  category: z.string().max(100).optional(),
+  platform: z.enum(['webflow', 'framer', 'wix']).optional(),
+  madeBy: z.enum(['flowbites', 'community']).optional(),
+  featured: z.enum(['true', 'false']).optional(),
+  free: z.enum(['true']).optional(),
+  sale: z.enum(['true']).optional(),
+  priceMin: z.coerce.number().min(0).optional(),
+  priceMax: z.coerce.number().min(0).optional(),
+  sort: z.enum(['newest', 'popular', 'price_low', 'price_high', 'rating', 'sales']).optional().default('newest'),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(1000).optional().default(24),
+});
+
 export const updateTemplateSchema = z.object({
   body: z.object({
     title: z.string().min(1).max(200).optional(),

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Mail, Loader2, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { showToast } from "@/design-system/Toast";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 import { Button } from "@/design-system";
 
 interface EmailPreferencesData {
@@ -104,11 +105,8 @@ export function EmailPreferences() {
         await api.patch("/settings/email-preferences", newPreferences);
         setPreferences(newPreferences);
         showToast("Preference saved", "success");
-      } catch (err: any) {
-        showToast(
-          err?.response?.data?.error || "Failed to save preference",
-          "error",
-        );
+      } catch (err: unknown) {
+        showToast(getErrorMessage(err, "Failed to save preference"), "error");
         // Revert on error
         setPreferences((prev) => ({ ...prev }));
       } finally {

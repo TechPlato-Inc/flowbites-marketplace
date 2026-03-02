@@ -2,7 +2,7 @@ import express from 'express';
 import { ReviewController } from './review.controller.js';
 import { validate } from '../../middleware/validate.js';
 import { createReviewSchema, updateReviewSchema, moderateReviewSchema } from './review.validator.js';
-import { authenticate, authorize, requireAdmin } from '../../middleware/auth.js';
+import { authenticate, can } from '../../middleware/auth.js';
 
 const router = express.Router();
 const reviewController = new ReviewController();
@@ -44,7 +44,7 @@ router.delete(
 router.get(
   '/admin/all',
   authenticate,
-  requireAdmin,
+  can('reviews.moderate'),
   reviewController.adminGetReviews
 );
 
@@ -52,7 +52,7 @@ router.get(
 router.patch(
   '/admin/:reviewId/moderate',
   authenticate,
-  requireAdmin,
+  can('reviews.moderate'),
   validate(moderateReviewSchema),
   reviewController.moderateReview
 );

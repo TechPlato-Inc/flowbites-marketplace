@@ -17,6 +17,9 @@ import {
   createTestTemplate,
   generateTestToken,
 } from './setup.js';
+import { runRbacServiceTests } from '../src/modules/rbac/__tests__/rbac.service.test.js';
+import { runCanMiddlewareTests } from '../src/middleware/__tests__/auth.can.test.js';
+import { runRbacIntegrationTests } from '../src/modules/rbac/__tests__/rbac.integration.test.js';
 
 import dotenv from 'dotenv';
 dotenv.config();
@@ -735,6 +738,8 @@ async function run() {
     await clearCollections();
 
     await authTests();
+    await runRbacServiceTests({ test, assert, clearCollections, createTestUser });
+    await runCanMiddlewareTests({ test, assert });
     await reviewTests();
     await refundTests();
     await couponTests();
@@ -742,8 +747,18 @@ async function run() {
     await wishlistTests();
     await notificationTests();
     await templateVersionTests();
+    await clearCollections();
     await startApiServer();
     await apiModuleTests();
+    await runRbacIntegrationTests({
+      test,
+      assert,
+      apiRequest,
+      loginToken,
+      createTestUser,
+      createTestAdmin,
+      createTestCreator,
+    });
     await stopApiServer();
 
     console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);

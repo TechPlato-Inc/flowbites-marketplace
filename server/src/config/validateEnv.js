@@ -1,3 +1,5 @@
+import logger from '../lib/logger.js';
+
 /**
  * Validate required environment variables on startup.
  * Warns for optional vars, exits for critical ones.
@@ -21,13 +23,13 @@ export function validateEnv() {
 
   for (const { key, hint } of required) {
     if (!process.env[key]) {
-      missing.push(`  ${key} — ${hint}`);
+      missing.push(`${key} — ${hint}`);
     }
   }
 
   for (const { key, hint } of optional) {
     if (!process.env[key]) {
-      warnings.push(`  ${key} — ${hint}`);
+      warnings.push(`${key} — ${hint}`);
     }
   }
 
@@ -37,21 +39,17 @@ export function validateEnv() {
     for (const secretKey of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET']) {
       const val = process.env[secretKey] || '';
       if (insecureDefaults.some(d => val.toLowerCase().includes(d))) {
-        missing.push(`  ${secretKey} — Using insecure default value in production!`);
+        missing.push(`${secretKey} — Using insecure default value in production!`);
       }
     }
   }
 
   if (warnings.length > 0) {
-    console.log('⚠️  Optional env vars not set (features will run in fallback mode):');
-    warnings.forEach(w => console.log(w));
-    console.log('');
+    logger.warn({ vars: warnings }, 'Optional env vars not set (features will run in fallback mode)');
   }
 
   if (missing.length > 0) {
-    console.error('❌ Missing required environment variables:');
-    missing.forEach(m => console.error(m));
-    console.error('\nCopy .env.example to .env and fill in the values.');
+    logger.error({ vars: missing }, 'Missing required environment variables — copy .env.example to .env and fill in the values');
     process.exit(1);
   }
 }

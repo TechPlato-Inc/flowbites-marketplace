@@ -1,6 +1,7 @@
 import { Order } from '../modules/orders/order.model.js';
 import { Notification } from '../modules/notifications/notification.model.js';
 import { AuditLog } from '../modules/audit/auditLog.model.js';
+import { ReferralConversion, Affiliate } from '../modules/affiliates/affiliate.model.js';
 
 /**
  * Scheduled cleanup jobs.
@@ -82,6 +83,49 @@ async function cleanupExpiredRefreshTokens() {
 }
 
 /**
+ * Auto-approve affiliate conversions that are older than 30 days (past refund window).
+ * Moves commission from pendingEarnings to totalEarnings on the affiliate record.
+ */
+async function autoApproveAffiliateConversions() {
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+
+  const pendingConversions = await ReferralConversion.find({
+    status: 'pending',
+    createdAt: { $lt: cutoff },
+  });
+
+  if (pendingConversions.length === 0) return 0;
+
+  // Group by affiliate for bulk stat updates
+  const byAffiliate = {};
+  for (const conv of pendingConversions) {
+    const aid = conv.affiliateId.toString();
+    if (!byAffiliate[aid]) byAffiliate[aid] = 0;
+    byAffiliate[aid] += conv.commissionAmount;
+  }
+
+  // Approve all mature conversions
+  const convIds = pendingConversions.map(c => c._id);
+  await ReferralConversion.updateMany(
+    { _id: { $in: convIds } },
+    { $set: { status: 'approved' } }
+  );
+
+  // Update affiliate stats: move from pending to approved (totalEarnings)
+  for (const [affiliateId, amount] of Object.entries(byAffiliate)) {
+    await Affiliate.findByIdAndUpdate(affiliateId, {
+      $inc: {
+        'stats.pendingEarnings': -amount,
+        'stats.totalEarnings': amount,
+      }
+    });
+  }
+
+  console.log(`[CRON] Auto-approved ${pendingConversions.length} affiliate conversions`);
+  return pendingConversions.length;
+}
+
+/**
  * Run all cleanup jobs. Call this on a schedule (e.g., every hour).
  */
 export async function runCleanupJobs() {
@@ -92,6 +136,7 @@ export async function runCleanupJobs() {
       cleanupOldReadNotifications(),
       cleanupOldAuditLogs(),
       cleanupExpiredRefreshTokens(),
+      autoApproveAffiliateConversions(),
     ]);
     console.log('[CRON] Cleanup jobs completed');
   } catch (err) {

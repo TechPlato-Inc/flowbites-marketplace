@@ -29,7 +29,8 @@ export function LoginForm() {
       } else {
         // Role-based redirect to the correct dashboard
         const { user } = useAuthStore.getState();
-        if (user?.role === "admin") router.push("/dashboard/admin");
+        if (user?.role === "admin" || user?.role === "super_admin")
+          router.push("/dashboard/admin");
         else if (user?.role === "creator") router.push("/dashboard/creator");
         else router.push("/dashboard/buyer");
       }

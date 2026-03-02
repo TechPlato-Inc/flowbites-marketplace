@@ -19,13 +19,14 @@ import {
 } from "lucide-react";
 import { api, getUploadUrl } from "@/lib/api/client";
 import { showToast } from "@/design-system/Toast";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 import { UserDetailModal } from "./UserDetailModal";
 
 interface AdminUserInfo {
   _id: string;
   name: string;
   email: string;
-  role: "buyer" | "creator" | "admin";
+  role: "buyer" | "creator" | "admin" | "super_admin";
   avatar?: string;
   isActive: boolean;
   isBanned: boolean;
@@ -115,8 +116,8 @@ export function UserManagement() {
       showToast("User banned successfully", "success");
       fetchUsers(pagination.page);
       fetchStats();
-    } catch (err: any) {
-      showToast(err?.response?.data?.error || "Failed to ban user", "error");
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, "Failed to ban user"), "error");
     } finally {
       setActionLoading(null);
     }
@@ -129,8 +130,8 @@ export function UserManagement() {
       showToast("User unbanned successfully", "success");
       fetchUsers(pagination.page);
       fetchStats();
-    } catch (err: any) {
-      showToast(err?.response?.data?.error || "Failed to unban user", "error");
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, "Failed to unban user"), "error");
     } finally {
       setActionLoading(null);
     }
@@ -143,8 +144,8 @@ export function UserManagement() {
       showToast(`Role updated to ${newRole}`, "success");
       fetchUsers(pagination.page);
       fetchStats();
-    } catch (err: any) {
-      showToast(err?.response?.data?.error || "Failed to change role", "error");
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, "Failed to change role"), "error");
     } finally {
       setActionLoading(null);
     }

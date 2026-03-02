@@ -1,25 +1,25 @@
 import express from 'express';
 import { CreatorController } from './creator.controller.js';
-import { authenticate, authorize } from '../../middleware/auth.js';
+import { authenticate, can } from '../../middleware/auth.js';
 import { uploadOnboarding } from '../../middleware/upload.js';
 
 const router = express.Router();
 const creatorController = new CreatorController();
 
 // Onboarding routes (authenticated creators only) — must be before /:identifier
-router.get('/onboarding/status', authenticate, authorize('creator', 'admin'), creatorController.getOnboardingStatus);
-router.post('/onboarding/personal-info', authenticate, authorize('creator', 'admin'), creatorController.savePersonalInfo);
-router.post('/onboarding/government-id', authenticate, authorize('creator', 'admin'), uploadOnboarding, creatorController.saveGovernmentId);
-router.post('/onboarding/selfie', authenticate, authorize('creator', 'admin'), uploadOnboarding, creatorController.saveSelfieVerification);
-router.post('/onboarding/bank-details', authenticate, authorize('creator', 'admin'), creatorController.saveBankDetails);
-router.post('/onboarding/creator-reference', authenticate, authorize('creator', 'admin'), creatorController.saveCreatorReference);
-router.post('/onboarding/submit', authenticate, authorize('creator', 'admin'), creatorController.submitOnboarding);
-router.get('/onboarding/search', authenticate, authorize('creator', 'admin'), creatorController.searchCreators);
+router.get('/onboarding/status', authenticate, can('creators.onboarding'), creatorController.getOnboardingStatus);
+router.post('/onboarding/personal-info', authenticate, can('creators.onboarding'), creatorController.savePersonalInfo);
+router.post('/onboarding/government-id', authenticate, can('creators.onboarding'), uploadOnboarding, creatorController.saveGovernmentId);
+router.post('/onboarding/selfie', authenticate, can('creators.onboarding'), uploadOnboarding, creatorController.saveSelfieVerification);
+router.post('/onboarding/bank-details', authenticate, can('creators.onboarding'), creatorController.saveBankDetails);
+router.post('/onboarding/creator-reference', authenticate, can('creators.onboarding'), creatorController.saveCreatorReference);
+router.post('/onboarding/submit', authenticate, can('creators.onboarding'), creatorController.submitOnboarding);
+router.get('/onboarding/search', authenticate, can('creators.onboarding'), creatorController.searchCreators);
 
 // Stripe Connect
-router.post('/connect/onboard', authenticate, authorize('creator', 'admin'), creatorController.connectStripe);
-router.get('/connect/status', authenticate, authorize('creator', 'admin'), creatorController.getConnectStatus);
-router.get('/connect/dashboard', authenticate, authorize('creator', 'admin'), creatorController.getStripeDashboard);
+router.post('/connect/onboard', authenticate, can('creators.onboarding'), creatorController.connectStripe);
+router.get('/connect/status', authenticate, can('creators.onboarding'), creatorController.getConnectStatus);
+router.get('/connect/dashboard', authenticate, can('creators.onboarding'), creatorController.getStripeDashboard);
 
 // Public: list all verified creators
 router.get('/', creatorController.getAll);

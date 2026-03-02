@@ -1,0 +1,31 @@
+import { z } from 'zod';
+
+export const listNotificationsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  type: z.enum([
+    'order_paid',
+    'order_refunded',
+    'template_approved',
+    'template_rejected',
+    'review_received',
+    'review_moderated',
+    'creator_approved',
+    'creator_rejected',
+    'refund_approved',
+    'refund_rejected',
+    'service_order_update',
+    'withdrawal_approved',
+    'withdrawal_rejected',
+    'withdrawal_completed',
+    'ticket_reply',
+    'ticket_resolved',
+    'report_resolved',
+    'new_follower',
+    'new_message',
+    'order_expired',
+    'payment_failed',
+    'system',
+  ]).optional(),
+  unread: z.enum(['true', 'false']).optional(),
+});

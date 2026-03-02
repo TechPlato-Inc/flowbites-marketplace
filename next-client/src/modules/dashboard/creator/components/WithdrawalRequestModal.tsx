@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api } from "@/lib/api/client";
 import { Modal, Button } from "@/design-system";
 import { AlertCircle, Wallet } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 interface WithdrawalRequestModalProps {
   isOpen: boolean;
@@ -53,8 +54,8 @@ export function WithdrawalRequestModal({
         note: note.trim() || undefined,
       });
       onSuccess();
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to request withdrawal");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to request withdrawal"));
     } finally {
       setLoading(false);
     }

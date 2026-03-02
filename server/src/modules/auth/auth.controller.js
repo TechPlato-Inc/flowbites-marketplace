@@ -1,11 +1,14 @@
-import { AuthService } from './auth.service.js';
+import { AuthQueryService } from './auth.queryService.js';
+import { AuthWriteService } from './auth.writeService.js';
+import { toAuthResponseDTO, toUserDTO } from './dto/authResponse.dto.js';
 
-const authService = new AuthService();
+const queryService = new AuthQueryService();
+const writeService = new AuthWriteService();
 
 export class AuthController {
   async register(req, res, next) {
     try {
-      const result = await authService.register(req.body);
+      const result = await writeService.register(req.body);
 
       // Set refresh token in httpOnly cookie
       res.cookie('refreshToken', result.refreshToken, {
@@ -33,10 +36,7 @@ export class AuthController {
 
       res.status(201).json({
         success: true,
-        data: {
-          user: result.user,
-          accessToken: result.accessToken,
-        }
+        data: toAuthResponseDTO(result),
       });
     } catch (error) {
       next(error);
@@ -45,7 +45,7 @@ export class AuthController {
 
   async login(req, res, next) {
     try {
-      const result = await authService.login({ ...req.body, ip: req.ip });
+      const result = await writeService.login({ ...req.body, ip: req.ip });
 
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
@@ -72,10 +72,7 @@ export class AuthController {
 
       res.json({
         success: true,
-        data: {
-          user: result.user,
-          accessToken: result.accessToken,
-        }
+        data: toAuthResponseDTO(result),
       });
     } catch (error) {
       next(error);
@@ -92,7 +89,7 @@ export class AuthController {
         });
       }
 
-      const result = await authService.refreshAccessToken(refreshToken);
+      const result = await queryService.refreshAccessToken(refreshToken);
 
       // Update access token cookie
       res.cookie('accessToken', result.accessToken, {
@@ -114,7 +111,7 @@ export class AuthController {
   async logout(req, res, next) {
     try {
       const refreshToken = req.body.refreshToken || req.cookies.refreshToken;
-      await authService.logout(req.user._id, refreshToken);
+      await writeService.logout(req.user._id, refreshToken);
 
       res.clearCookie('refreshToken');
       res.clearCookie('accessToken');
@@ -140,7 +137,7 @@ export class AuthController {
     try {
       res.json({
         success: true,
-        data: { user: req.user }
+        data: { user: toUserDTO(req.user) }
       });
     } catch (error) {
       next(error);
@@ -149,10 +146,10 @@ export class AuthController {
 
   async updateProfile(req, res, next) {
     try {
-      const result = await authService.updateProfile(req.user._id, req.body);
+      const result = await writeService.updateProfile(req.user._id, req.body);
       res.json({
         success: true,
-        data: { user: result }
+        data: { user: toUserDTO(result) }
       });
     } catch (error) {
       next(error);
@@ -161,7 +158,7 @@ export class AuthController {
 
   async changePassword(req, res, next) {
     try {
-      await authService.changePassword(req.user._id, req.body);
+      await writeService.changePassword(req.user._id, req.body);
       res.json({
         success: true,
         data: { message: 'Password changed successfully' }
@@ -173,7 +170,7 @@ export class AuthController {
 
   async forgotPassword(req, res, next) {
     try {
-      const result = await authService.forgotPassword(req.body);
+      const result = await writeService.forgotPassword(req.body);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -182,7 +179,7 @@ export class AuthController {
 
   async resetPassword(req, res, next) {
     try {
-      const result = await authService.resetPassword(req.body);
+      const result = await writeService.resetPassword(req.body);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -191,7 +188,7 @@ export class AuthController {
 
   async verifyEmail(req, res, next) {
     try {
-      const result = await authService.verifyEmail(req.query);
+      const result = await writeService.verifyEmail(req.query);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -200,7 +197,7 @@ export class AuthController {
 
   async resendVerification(req, res, next) {
     try {
-      const result = await authService.resendVerificationEmail(req.user._id);
+      const result = await writeService.resendVerificationEmail(req.user._id);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);

@@ -5,6 +5,7 @@ import { Button, Input } from "@/design-system";
 import { Tag, X, Check, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { showToast } from "@/design-system/Toast";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 interface CouponValidation {
   valid: boolean;
@@ -63,8 +64,8 @@ export function CouponInput({
       } else {
         setError("Invalid coupon code");
       }
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Failed to validate coupon");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to validate coupon"));
     } finally {
       setLoading(false);
     }

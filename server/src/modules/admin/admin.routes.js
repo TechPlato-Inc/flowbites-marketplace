@@ -1,39 +1,50 @@
 import express from 'express';
 import { AdminController } from './admin.controller.js';
-import { authenticate, authorize } from '../../middleware/auth.js';
+import { authenticate, can } from '../../middleware/auth.js';
+import { validate } from '../../middleware/validate.js';
+import { z } from 'zod';
+import {
+  listTemplatesQuerySchema,
+  listCreatorsQuerySchema,
+  rejectTemplateSchema,
+  bulkActionSchema,
+  updateTemplateSchema,
+  rejectCreatorSchema,
+} from './admin.validator.js';
 
 const router = express.Router();
 const adminController = new AdminController();
 
-router.use(authenticate, authorize('admin'));
+// All admin routes require authentication
+router.use(authenticate);
 
 // Dashboard overview stats
-router.get('/dashboard-stats', adminController.getDashboardStats);
+router.get('/dashboard-stats', can('dashboard.admin'), adminController.getDashboardStats);
 
-// Static routes first (before :id param routes)
-router.get('/templates/pending', adminController.getPendingTemplates);
-router.get('/templates/stats', adminController.getStats);
-router.get('/templates/export', adminController.exportTemplates);
-router.post('/templates/bulk', adminController.bulkAction);
-router.get('/templates', adminController.getAllTemplates);
+// Template management
+router.get('/templates/pending', can('templates.view_all'), adminController.getPendingTemplates);
+router.get('/templates/stats', can('templates.view_all'), adminController.getStats);
+router.get('/templates/export', can('templates.view_all'), adminController.exportTemplates);
+router.post('/templates/bulk', can('templates.approve'), validate(bulkActionSchema), adminController.bulkAction);
+router.get('/templates', can('templates.view_all'), validate(z.object({ query: listTemplatesQuerySchema })), adminController.getAllTemplates);
 
 // Parameterized template routes
-router.get('/templates/:id', adminController.getTemplateById);
-router.patch('/templates/:id', adminController.updateTemplate);
-router.delete('/templates/:id', adminController.deleteTemplate);
-router.post('/templates/:id/approve', adminController.approveTemplate);
-router.post('/templates/:id/reject', adminController.rejectTemplate);
+router.get('/templates/:id', can('templates.view_all'), adminController.getTemplateById);
+router.patch('/templates/:id', can('templates.approve'), validate(updateTemplateSchema), adminController.updateTemplate);
+router.delete('/templates/:id', can('templates.delete'), adminController.deleteTemplate);
+router.post('/templates/:id/approve', can('templates.approve'), adminController.approveTemplate);
+router.post('/templates/:id/reject', can('templates.approve'), validate(rejectTemplateSchema), adminController.rejectTemplate);
 
-// Creator management (static routes first)
-router.get('/creators/pending', adminController.getPendingCreators);
-router.get('/creators', adminController.getAllCreators);
-router.get('/creators/:id', adminController.getCreatorById);
-router.post('/creators/:id/approve', adminController.approveCreator);
-router.post('/creators/:id/reject', adminController.rejectCreator);
+// Creator management
+router.get('/creators/pending', can('creators.admin'), adminController.getPendingCreators);
+router.get('/creators', can('creators.admin'), validate(z.object({ query: listCreatorsQuerySchema })), adminController.getAllCreators);
+router.get('/creators/:id', can('creators.admin'), adminController.getCreatorById);
+router.post('/creators/:id/approve', can('creators.admin'), adminController.approveCreator);
+router.post('/creators/:id/reject', can('creators.admin'), validate(rejectCreatorSchema), adminController.rejectCreator);
 
 // Category management
-router.patch('/categories/:id', adminController.updateCategory);
-router.delete('/categories/:id', adminController.deleteCategory);
-router.post('/categories/reorder', adminController.reorderCategories);
+router.patch('/categories/:id', can('dashboard.admin'), adminController.updateCategory);
+router.delete('/categories/:id', can('dashboard.admin'), adminController.deleteCategory);
+router.post('/categories/reorder', can('dashboard.admin'), adminController.reorderCategories);
 
 export default router;

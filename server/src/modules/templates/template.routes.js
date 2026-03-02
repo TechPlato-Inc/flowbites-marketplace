@@ -2,7 +2,7 @@ import express from 'express';
 import { TemplateController } from './template.controller.js';
 import { validate } from '../../middleware/validate.js';
 import { createTemplateSchema, updateTemplateSchema } from './template.validator.js';
-import { authenticate, authorize } from '../../middleware/auth.js';
+import { authenticate, can } from '../../middleware/auth.js';
 import { uploadTemplate } from '../../middleware/upload.js';
 import { cloudinaryUpload } from '../../middleware/cloudinaryUpload.js';
 import { cacheResponse } from '../../middleware/cache.js';
@@ -14,7 +14,7 @@ const templateController = new TemplateController();
 router.get(
   '/my-templates',
   authenticate,
-  authorize('creator', 'admin'),
+  can('templates.create'),
   templateController.getMyTemplates
 );
 
@@ -22,11 +22,14 @@ router.get(
 router.get('/', cacheResponse(60), templateController.getAll);
 router.get('/:id', cacheResponse(30), templateController.getById);
 
+// View tracking (not cached, deduplicated by IP)
+router.post('/:id/view', templateController.trackView);
+
 // Creator routes
 router.post(
   '/',
   authenticate,
-  authorize('creator', 'admin'),
+  can('templates.create'),
   uploadTemplate,
   cloudinaryUpload,
   validate(createTemplateSchema),
@@ -36,7 +39,7 @@ router.post(
 router.patch(
   '/:id',
   authenticate,
-  authorize('creator', 'admin'),
+  can('templates.create'),
   uploadTemplate,
   cloudinaryUpload,
   validate(updateTemplateSchema),
@@ -46,14 +49,14 @@ router.patch(
 router.delete(
   '/:id',
   authenticate,
-  authorize('creator', 'admin'),
+  can('templates.create'),
   templateController.delete
 );
 
 router.post(
   '/:id/submit',
   authenticate,
-  authorize('creator', 'admin'),
+  can('templates.create'),
   templateController.submit
 );
 

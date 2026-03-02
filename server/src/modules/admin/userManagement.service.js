@@ -2,6 +2,10 @@ import { User } from '../users/user.model.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { escapeRegex } from '../../lib/utils.js';
 import { AuditLog } from '../audit/auditLog.model.js';
+import { Role } from '../rbac/role.model.js';
+import { rbacService } from '../rbac/rbac.service.js';
+import { clearUserCache } from '../../lib/userCache.js';
+import { eventBus, EVENTS } from '../../shared/eventBus.js';
 
 export class UserManagementService {
   /**
@@ -69,6 +73,7 @@ export class UserManagementService {
     user.bannedBy = adminId;
     user.refreshTokens = [];
     await user.save();
+    clearUserCache(userId);
 
     // Audit log (non-blocking)
     AuditLog.create({
@@ -92,6 +97,7 @@ export class UserManagementService {
     user.bannedBy = undefined;
     user.banReason = undefined;
     await user.save();
+    clearUserCache(userId);
 
     // Audit log (non-blocking)
     AuditLog.create({
@@ -103,11 +109,18 @@ export class UserManagementService {
   }
 
   /**
-   * Change a user's role.
+   * Change a user's role. Validates against the Role collection (supports custom roles).
    */
   async changeRole(userId, newRole, adminId) {
-    if (!['buyer', 'creator', 'admin'].includes(newRole)) {
-      throw new AppError('Invalid role', 400);
+    // Validate the role exists in the Role collection
+    const roleDoc = await Role.findOne({ name: newRole, isActive: true });
+    if (!roleDoc) {
+      throw new AppError(`Role "${newRole}" does not exist`, 400);
+    }
+
+    // Prevent assigning super_admin via this endpoint
+    if (newRole === 'super_admin') {
+      throw new AppError('Cannot assign super_admin role through user management', 400);
     }
 
     if (userId.toString() === adminId.toString()) {
@@ -124,6 +137,10 @@ export class UserManagementService {
     const oldRole = user.role;
     user.role = newRole;
     await user.save();
+    clearUserCache(userId);
+
+    // Invalidate permission cache for this role (in case user was cached)
+    rbacService.invalidateCache(oldRole);
 
     // Audit log (non-blocking)
     AuditLog.create({
@@ -131,7 +148,48 @@ export class UserManagementService {
       details: { userName: user.name, oldRole, newRole },
     }).catch(() => {});
 
-    return { message: `User role changed to ${newRole}`, user };
+    // Emit domain event for cross-module reactivity
+    eventBus.emit(EVENTS.ROLE_CHANGED, {
+      userId: userId.toString(),
+      oldRole,
+      newRole,
+      changedBy: adminId.toString(),
+    });
+
+    return { message: `User role changed to ${roleDoc.displayName}`, user };
+  }
+
+  /**
+   * Permanently delete a user account.
+   */
+  async deleteUser(userId, adminId) {
+    if (userId.toString() === adminId.toString()) {
+      throw new AppError('Cannot delete your own account', 400);
+    }
+
+    const user = await User.findById(userId);
+    if (!user) throw new AppError('User not found', 404);
+
+    if (user.role === 'super_admin') {
+      throw new AppError('Cannot delete super admin accounts', 400);
+    }
+
+    if (user.role === 'admin') {
+      throw new AppError('Cannot delete admin accounts — demote them first', 400);
+    }
+
+    const userName = user.name;
+    const userEmail = user.email;
+
+    await User.findByIdAndDelete(userId);
+
+    // Audit log (non-blocking)
+    AuditLog.create({
+      adminId, action: 'user_deleted', targetType: 'user', targetId: userId,
+      details: { userName, email: userEmail },
+    }).catch(() => {});
+
+    return { message: `User ${userName} has been permanently deleted` };
   }
 
   /**

@@ -11,6 +11,7 @@ import {
   DollarSign,
   ArrowRight,
 } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 interface Withdrawal {
   _id: string;
@@ -122,10 +123,8 @@ export function WithdrawalManagement() {
       setActionType(null);
       setAdminNote("");
       setStripeTransferId("");
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message || `Failed to ${actionType} withdrawal`,
-      );
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, `Failed to ${actionType} withdrawal`));
     } finally {
       setActionLoading(false);
     }

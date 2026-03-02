@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api } from "@/lib/api/client";
 import { Modal, Button, Input } from "@/design-system";
 import { AlertCircle } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 interface CreateTicketModalProps {
   isOpen: boolean;
@@ -72,15 +73,8 @@ export function CreateTicketModal({
       });
       onSuccess();
       resetForm();
-    } catch (err: any) {
-      const errData = err.response?.data;
-      const detail = errData?.details?.[0];
-      setError(
-        detail ||
-          errData?.error ||
-          errData?.message ||
-          "Failed to create ticket",
-      );
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to create ticket"));
     } finally {
       setLoading(false);
     }

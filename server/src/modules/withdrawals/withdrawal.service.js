@@ -5,6 +5,8 @@ import { AppError } from '../../middleware/errorHandler.js';
 import { AuditLog } from '../audit/auditLog.model.js';
 import { NotificationService } from '../notifications/notification.service.js';
 import { sendWithdrawalApproved, sendWithdrawalRejected, sendPayoutProcessed } from '../../services/email.js';
+import { eventBus, EVENTS } from '../../shared/eventBus.js';
+import { toWithdrawalDTO, toAdminWithdrawalDTO } from './dto/withdrawal.dto.js';
 
 const notificationService = new NotificationService();
 
@@ -80,7 +82,13 @@ export class WithdrawalService {
         note,
       });
 
-      return withdrawal;
+      eventBus.emit(EVENTS.WITHDRAWAL_REQUESTED, {
+        userId: creatorId.toString(),
+        withdrawalId: withdrawal._id.toString(),
+        amount: requestedAmount,
+      });
+
+      return toWithdrawalDTO(withdrawal);
     } catch (error) {
       if (error?.code === 11000) {
         throw new AppError('You already have a pending withdrawal request', 400);
@@ -105,7 +113,7 @@ export class WithdrawalService {
     ]);
 
     return {
-      withdrawals,
+      withdrawals: withdrawals.map(toWithdrawalDTO),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
   }
@@ -130,7 +138,7 @@ export class WithdrawalService {
     ]);
 
     return {
-      withdrawals,
+      withdrawals: withdrawals.map(toAdminWithdrawalDTO),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
   }
@@ -165,7 +173,14 @@ export class WithdrawalService {
       if (user) sendWithdrawalApproved(user.email, user.name, withdrawal.amount).catch(() => {});
     }).catch(() => {});
 
-    return withdrawal;
+    eventBus.emit(EVENTS.WITHDRAWAL_PROCESSED, {
+      userId: withdrawal.creatorId.toString(),
+      withdrawalId: withdrawal._id.toString(),
+      amount: withdrawal.amount,
+      status: 'approved',
+    });
+
+    return toWithdrawalDTO(withdrawal);
   }
 
   /**
@@ -199,11 +214,18 @@ export class WithdrawalService {
       if (user) sendWithdrawalRejected(user.email, user.name, withdrawal.amount, adminNote).catch(() => {});
     }).catch(() => {});
 
-    return withdrawal;
+    eventBus.emit(EVENTS.WITHDRAWAL_PROCESSED, {
+      userId: withdrawal.creatorId.toString(),
+      withdrawalId: withdrawal._id.toString(),
+      amount: withdrawal.amount,
+      status: 'rejected',
+    });
+
+    return toWithdrawalDTO(withdrawal);
   }
 
   /**
-   * Mark a withdrawal as completed (admin — after actual payout).
+   * Mark a withdrawal as completed (admin -- after actual payout).
    */
   async completeWithdrawal(withdrawalId, adminId, { stripeTransferId } = {}) {
     const withdrawal = await Withdrawal.findById(withdrawalId);
@@ -224,6 +246,13 @@ export class WithdrawalService {
       if (user) sendPayoutProcessed(user.email, user.name, withdrawal.amount).catch(() => {});
     }).catch(() => {});
 
-    return withdrawal;
+    eventBus.emit(EVENTS.WITHDRAWAL_PROCESSED, {
+      userId: withdrawal.creatorId.toString(),
+      withdrawalId: withdrawal._id.toString(),
+      amount: withdrawal.amount,
+      status: 'completed',
+    });
+
+    return toWithdrawalDTO(withdrawal);
   }
 }

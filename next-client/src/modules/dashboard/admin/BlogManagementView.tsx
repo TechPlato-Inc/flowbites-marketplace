@@ -258,10 +258,13 @@ export function BlogManagementView() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
-  const handleFormChange = (field: string, value: any) => {
+  const handleFormChange = (
+    field: string,
+    value: string | boolean | string[],
+  ) => {
     setFormData((prev) => {
       const updated = { ...prev, [field]: value };
-      if (field === "title" && !editingPost) {
+      if (field === "title" && !editingPost && typeof value === "string") {
         updated.slug = generateSlug(value);
       }
       return updated;

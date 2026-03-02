@@ -13,6 +13,8 @@ import { TicketManagement } from "./components/TicketManagement";
 import { ReportManagement } from "./components/ReportManagement";
 import { WithdrawalManagement } from "./components/WithdrawalManagement";
 import { ShotManagement } from "./components/ShotManagement";
+import { AuditManagement } from "./components/AuditManagement";
+import { RoleManagement } from "./components/RoleManagement";
 import { Button, Badge, Modal } from "@/design-system";
 import {
   DashboardSidebar,
@@ -42,6 +44,8 @@ import {
   Flag,
   Wallet,
   Image,
+  ClipboardCheck,
+  Lock,
 } from "lucide-react";
 
 type View =
@@ -57,7 +61,9 @@ type View =
   | "tickets"
   | "reports"
   | "withdrawals"
-  | "shots";
+  | "shots"
+  | "audit"
+  | "roles";
 
 export const AdminDashboardView = () => {
   const [activeView, setActiveView] = useState<View>("overview");
@@ -383,6 +389,18 @@ export const AdminDashboardView = () => {
       icon: Image,
       onClick: () => setActiveView("shots"),
       section: "Content",
+    },
+    {
+      label: "Audit Logs",
+      icon: ClipboardCheck,
+      onClick: () => setActiveView("audit"),
+      section: "Security",
+    },
+    {
+      label: "Roles & Permissions",
+      icon: Lock,
+      onClick: () => setActiveView("roles"),
+      section: "Security",
     },
     {
       label: "Messages",
@@ -1210,6 +1228,12 @@ export const AdminDashboardView = () => {
       {/* ============ SHOTS ============ */}
       {activeView === "shots" && <ShotManagement />}
 
+      {/* ============ AUDIT LOGS ============ */}
+      {activeView === "audit" && <AuditManagement />}
+
+      {/* ============ ROLES & PERMISSIONS ============ */}
+      {activeView === "roles" && <RoleManagement />}
+
       {/* ============ MODALS ============ */}
 
       {/* Rejection Modal */}
@@ -1298,7 +1322,9 @@ export const AdminDashboardView = () => {
               {creators.map((c) => (
                 <option key={c._id} value={c._id}>
                   {c.name} ({c.email}){" "}
-                  {c.role === "admin" ? "- Flowbites Team" : ""}
+                  {c.role === "admin" || c.role === "super_admin"
+                    ? "- Flowbites Team"
+                    : ""}
                 </option>
               ))}
             </select>

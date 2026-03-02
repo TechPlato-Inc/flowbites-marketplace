@@ -1,6 +1,6 @@
 import express from 'express';
 import { TemplateVersionController } from './templateVersion.controller.js';
-import { authenticate, authorize } from '../../middleware/auth.js';
+import { authenticate, can } from '../../middleware/auth.js';
 
 const router = express.Router();
 const versionController = new TemplateVersionController();
@@ -14,14 +14,14 @@ router.get('/:templateId/versions/:version', versionController.getVersion);
 router.post(
   '/:templateId/versions',
   authenticate,
-  authorize('creator', 'admin'),
+  can('templates.create'),
   versionController.publishVersion
 );
 
 router.delete(
   '/:templateId/versions/:version',
   authenticate,
-  authorize('creator', 'admin'),
+  can('templates.create'),
   versionController.deleteVersion
 );
 

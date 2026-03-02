@@ -2,6 +2,8 @@ import express from 'express';
 import { WishlistController } from './wishlist.controller.js';
 import { authenticate } from '../../middleware/auth.js';
 import { userRateLimit } from '../../middleware/userRateLimit.js';
+import { validate } from '../../middleware/validate.js';
+import { addToWishlistSchema, bulkCheckSchema } from './wishlist.validator.js';
 
 const router = express.Router();
 const wishlistController = new WishlistController();
@@ -13,8 +15,8 @@ router.get('/count/:templateId', wishlistController.getWishlistCount);
 const wishlistToggleLimit = userRateLimit({ maxRequests: 30, windowMs: 60000, message: 'Too many wishlist actions, please slow down' });
 router.get('/', authenticate, wishlistController.getWishlist);
 router.get('/check/:templateId', authenticate, wishlistController.isInWishlist);
-router.post('/check-bulk', authenticate, wishlistController.checkBulkWishlist);
-router.post('/:templateId', authenticate, wishlistToggleLimit, wishlistController.addToWishlist);
+router.post('/check-bulk', authenticate, validate(bulkCheckSchema), wishlistController.checkBulkWishlist);
+router.post('/:templateId', authenticate, wishlistToggleLimit, validate(addToWishlistSchema), wishlistController.addToWishlist);
 router.delete('/:templateId', authenticate, wishlistToggleLimit, wishlistController.removeFromWishlist);
 
 export default router;

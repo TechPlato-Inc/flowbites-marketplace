@@ -10,6 +10,12 @@ import { HeroShowcase } from "./HeroShowcase";
 import { useScrollReveal } from "@/hooks/useAnimations";
 import { PLATFORM_BADGE_COLORS } from "@/lib/constants";
 import type { Template, Category, ServicePackage } from "@/types";
+import {
+  trackHeroCTA,
+  trackFeaturedTemplateClick,
+  trackCategoryClick,
+  trackSearch,
+} from "@/lib/analytics";
 
 import {
   ArrowRight,
@@ -182,6 +188,7 @@ export function HomeContent({
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      trackSearch(searchQuery.trim(), 0, { source: "home_hero" });
       router.push(`/templates?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
@@ -317,6 +324,9 @@ export function HomeContent({
                     <Reveal key={category._id} delay={catIdx * 80}>
                       <Link
                         href={`/templates?category=${category.slug}`}
+                        onClick={() =>
+                          trackCategoryClick(category.name, catIdx)
+                        }
                         className="group relative border border-neutral-200 rounded-xl bg-white hover:shadow-lg hover:border-primary-200 transition-all duration-200 overflow-hidden block hover:-translate-y-1"
                       >
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-400 to-secondary-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
@@ -413,8 +423,13 @@ export function HomeContent({
 
           <Reveal delay={150}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {featuredTemplates.map((template) => (
-                <TemplateCard key={template._id} template={template} />
+              {featuredTemplates.map((template, idx) => (
+                <TemplateCard
+                  key={template._id}
+                  template={template}
+                  position={idx}
+                  source="featured_section"
+                />
               ))}
             </div>
           </Reveal>
@@ -537,8 +552,13 @@ export function HomeContent({
             <TemplateGridSkeleton count={8} />
           ) : newestTemplates.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {newestTemplates.map((template) => (
-                <TemplateCard key={template._id} template={template} />
+              {newestTemplates.map((template, idx) => (
+                <TemplateCard
+                  key={template._id}
+                  template={template}
+                  position={idx}
+                  source="newest_section"
+                />
               ))}
             </div>
           ) : (
@@ -705,8 +725,13 @@ export function HomeContent({
 
               <Reveal delay={200}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                  {bestSellers.slice(0, 4).map((template) => (
-                    <TemplateCard key={template._id} template={template} />
+                  {bestSellers.slice(0, 4).map((template, idx) => (
+                    <TemplateCard
+                      key={template._id}
+                      template={template}
+                      position={idx}
+                      source="creator_spotlight"
+                    />
                   ))}
                 </div>
               </Reveal>
@@ -743,8 +768,13 @@ export function HomeContent({
           {bestSellers.length > 0 ? (
             <Reveal delay={150}>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {bestSellers.slice(0, 8).map((template) => (
-                  <TemplateCard key={template._id} template={template} />
+                {bestSellers.slice(0, 8).map((template, idx) => (
+                  <TemplateCard
+                    key={template._id}
+                    template={template}
+                    position={idx}
+                    source="best_sellers"
+                  />
                 ))}
               </div>
             </Reveal>

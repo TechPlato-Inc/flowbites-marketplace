@@ -1,6 +1,7 @@
 import { UIShot, ShotLike, ShotSave } from './uiShort.model.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { AuditLog } from '../audit/auditLog.model.js';
+import { toUiShortDTO, toAdminUiShortDTO } from './dto/uiShort.dto.js';
 
 export class UIShotService {
   async create(creatorId, data, imageFile) {
@@ -14,11 +15,11 @@ export class UIShotService {
       image: imageFile.filename
     });
 
-    return shot;
+    return toUiShortDTO(shot);
   }
 
   async getAll(filters = {}) {
-    const { page = 1, limit = 20, sort = 'recent' } = filters;
+    const { page = 1, limit = 20, sort = 'recent', search } = filters;
 
     let sortOption = {};
     switch (sort) {
@@ -34,18 +35,28 @@ export class UIShotService {
 
     const skip = (page - 1) * limit;
 
+    const query = { isPublished: true };
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { tags: { $regex: search, $options: 'i' } },
+      ];
+    }
+
     const [shots, total] = await Promise.all([
-      UIShot.find({ isPublished: true })
+      UIShot.find(query)
         .sort(sortOption)
         .skip(skip)
         .limit(limit)
         .populate('creatorId', 'name avatar')
-        .populate('templateId', 'title price'),
-      UIShot.countDocuments({ isPublished: true })
+        .populate('templateId', 'title price')
+        .lean(),
+      UIShot.countDocuments(query)
     ]);
 
     return {
-      shots,
+      shots: shots.map(toUiShortDTO),
       pagination: {
         page,
         limit,
@@ -102,7 +113,7 @@ export class UIShotService {
     ]);
 
     return {
-      shots,
+      shots: shots.map(toAdminUiShortDTO),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
   }
@@ -139,6 +150,6 @@ export class UIShotService {
     shot.isPublished = !shot.isPublished;
     await shot.save();
 
-    return shot;
+    return toAdminUiShortDTO(shot);
   }
 }

@@ -28,3 +28,15 @@ export const paginationSchema = z.object({
     limit: z.coerce.number().int().min(1).max(100).optional(),
   }),
 });
+
+// ─── Flat schemas used inside services / controller (no req wrapper) ────────
+
+export const listConversationsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+});
+
+export const listMessagesQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+});

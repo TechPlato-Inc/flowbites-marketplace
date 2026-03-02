@@ -31,6 +31,7 @@ import {
 import type { Notification } from "@/types";
 import { formatDate, formatRelativeDate } from "@/lib/utils/format";
 import { Button } from "@/design-system";
+import { getErrorMessage } from "@/lib/utils/getErrorMessage";
 
 const typeIcons: Record<
   string,
@@ -132,9 +133,9 @@ export function NotificationList() {
 
       setUnreadCount(data.unreadCount);
       setHasMore(pageNum < data.pagination.pages);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to fetch notifications:", err);
-      setError(err?.response?.data?.error || "Failed to load notifications");
+      setError(getErrorMessage(err, "Failed to load notifications"));
     } finally {
       setLoading(false);
     }
