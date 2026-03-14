@@ -52,8 +52,10 @@ COPY server/src ./src
 # Create uploads directories
 RUN mkdir -p uploads/images uploads/templates uploads/shots
 
-# Copy seed images conditionally (only if they exist)
-COPY server/uploads/images ./uploads/images
+# Copy seed images conditionally (only if they exist) - use shell to handle empty dirs
+RUN if [ -d "server/uploads/images" ] && [ "$(ls -A server/uploads/images 2>/dev/null)" ]; then \
+      cp -r server/uploads/images/* ./uploads/images/ || true; \
+    fi
 RUN if [ -d "server/uploads/shots" ] && [ "$(ls -A server/uploads/shots 2>/dev/null)" ]; then \
       cp -r server/uploads/shots/* ./uploads/shots/ || true; \
     fi

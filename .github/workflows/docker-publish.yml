@@ -16,6 +16,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+    continue-on-error: false
 
     steps:
       - name: Checkout repository
@@ -81,8 +82,12 @@ jobs:
             NEXT_PUBLIC_UPLOADS_URL=/uploads
 
       - name: Image summary
+        if: always()
         run: |
-          echo "## :docker: Docker Images Built & Pushed :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "## :docker: Docker Images Build Summary :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### API Image" >> $GITHUB_STEP_SUMMARY
           echo "- **Image:** \`${{ env.IMAGE_API }}\`" >> $GITHUB_STEP_SUMMARY
