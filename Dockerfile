@@ -52,9 +52,11 @@ COPY server/src ./src
 # Create uploads directories
 RUN mkdir -p uploads/images uploads/templates uploads/shots
 
-# Copy seed images (thumbnails, gallery, UI shots)
+# Copy seed images conditionally (only if they exist)
 COPY server/uploads/images ./uploads/images
-COPY server/uploads/shots ./uploads/shots
+RUN if [ -d "server/uploads/shots" ] && [ "$(ls -A server/uploads/shots 2>/dev/null)" ]; then \
+      cp -r server/uploads/shots/* ./uploads/shots/ || true; \
+    fi
 
 # Set ownership
 RUN chown -R flowbites:flowbites /app
