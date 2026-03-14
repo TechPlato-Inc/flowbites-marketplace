@@ -10,7 +10,7 @@
 
 1. Create free M0 cluster at mongodb.com/atlas
 2. Create database user with read/write privileges
-3. Network access: Allow from anywhere (`0.0.0.0/0`) for Railway
+3. Network access: Allow from anywhere (`0.0.0.0/0`) for Railways
 4. Copy connection string:
    ```
    mongodb+srv://user:password@cluster.mongodb.net/flowbites?retryWrites=true&w=majority
